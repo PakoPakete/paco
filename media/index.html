@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>PACO Scratch Editor</title>
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    #container {
+      display: flex;
+      height: 100%;
+      flex-direction: row;
+    }
+
+    #blocklyArea {
+      flex: 1;
+      position: relative;
+    }
+
+    #blocklyDiv {
+      position: absolute;
+      inset: 0;
+    }
+
+    #javaArea {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #javaCode {
+      flex: 1;
+      font-family: monospace;
+      font-size: 12px;
+      padding: 8px;
+      border: none;
+      resize: none;
+    }
+  </style>
+
+  <!-- Blockly desde CDN (versión que ya te funcionaba) -->
+  <script src="{{root}}/blockly/blockly.min.js"></script>
+  <script src="{{root}}/blockly/blocks_compressed.js"></script>
+  <script src="{{root}}/blockly/msg/en.js"></script>
+  <script src="{{root}}/index.js"></script>
+
+
+</head>
+
+<body>
+  <div style="display:flex; height:100%; flex-direction:column;">
+    <div style="padding:6px; background:#222; color:#fff; display:flex; gap:8px; align-items:center;">
+      <span style="font-weight:bold;">PACO</span>
+    </div>
+    <div id="blocklyArea" style="flex:1; position:relative;">
+      <div id="blocklyDiv" style="position:absolute; inset:0;"></div>
+    </div>
+  </div>
+</body>
+
+</html>

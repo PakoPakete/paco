@@ -1,0 +1,8 @@
+out
+dist
+node_modules
+.vscode-test/
+*.vsix
+
+# Archivo de quickstart generado por VS Code (no relevante para el repo)
+vsc-extension-quickstart.md

@@ -1,0 +1,96 @@
+{
+  "name": "paco",
+  "displayName": "PACO - Visual Java Editor",
+  "description": "PACO: visual block editor (Scratch-style) that generates compilable Java code in real time. Learn Java visually.",
+  "version": "0.2.0",
+  "publisher": "FranciscoSZ",
+  "license": "MIT",
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#1e1e2e",
+    "theme": "dark"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PakoPakete/paco"
+  },
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Education",
+    "Programming Languages",
+    "Visualization"
+  ],
+  "keywords": [
+    "java",
+    "blockly",
+    "scratch",
+    "visual programming",
+    "education",
+    "blocks",
+    "code generation"
+  ],
+"main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "pacoContainer",
+          "title": "PACO",
+          "icon": "images/icon.png"
+        }
+      ]
+    },
+    "views": {
+      "pacoContainer": [
+        {
+          "id": "pacoView",
+          "name": "PACO – Visual Java Editor"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "pacoView",
+        "contents": "Editor visual de bloques que genera código Java en tiempo real.\n\n[$(play) Abrir Editor PACO](command:paco.openEditor)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "paco.openEditor",
+        "title": "PACO: Abrir Editor Visual de Java",
+        "icon": "images/icon-activity-bar.svg"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.100.0",
+    "@types/xmldom": "^0.1.34",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.39.1",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.3",
+    "webpack": "^5.102.1",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "blockly": "^12.3.1",
+    "xmldom": "^0.6.0"
+  }
+}

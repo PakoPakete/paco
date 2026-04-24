@@ -1,0 +1,63 @@
+// ============================================================
+// BLOQUES REPARADOS
+// ============================================================
+
+[1] controls_switch
+  Fallo: el parser buscaba findStatement(block, 'DO') pero el bloque Blockly
+         declara appendStatementInput('CASES'). El nombre no coincidía, así
+         que el array de casos siempre era [] y el switch generaba
+         switch(expr) { } vacío.
+  Archivo: src/core/scratch/xmlToIr.ts → función parseSwitch()
+  Solución: cambiar 'DO' por 'CASES'
+
+[2] controls_for  (campo BY / paso)
+  Fallo: el campo BY (paso del bucle) se leía de Blockly pero nunca se usaba.
+         El incremento siempre era i++, ignorando el valor de paso configurado.
+  Archivo: src/core/scratch/xmlToIr.ts → función parseFor()
+  Solución: si BY != 1, usar IRVarChange (i += paso) en lugar de IRVarIncrement (i++)
+
+[3] text_equals
+  Fallo: el operador .equals se emitía como operador binario, generando
+         Java inválido: ("hola" .equals "mundo")
+  Archivo: src/core/java/irToJava.ts → función emitExpr(), case 'binary_op'
+  Solución: añadir caso especial para op === '.equals' que genere
+            left.equals(right)
+
+[4] text_substring
+  Fallo: el parser creaba un nodo { kind: 'text_substring', ... } con "as any"
+         pero el emisor irToJava.ts no tenía ningún case para ese tipo.
+         Resultado: siempre generaba 0 en lugar del substring.
+  Archivos:
+    - src/core/ir/nodes.ts       → añadir interfaz IRTextSubstring + unión IRExpr
+    - src/core/scratch/xmlToIr.ts → quitar "as any", añadir import IRTextSubstring
+    - src/core/java/irToJava.ts  → añadir case 'text_substring' que genere
+                                   texto.substring((int)(inicio), (int)(fin))
+
+[5] modifier_public / modifier_private / modifier_protected
+  Fallo: tres bloques presentes en el toolbox de OOP pero sin ningún input
+         compatible en ningún otro bloque (ningún bloque acepta tipo 'Modifier').
+         El usuario los podía arrastrar al workspace pero no se conectaban a nada
+         y no generaban código. Efecto visual: bloques flotando sin efecto.
+  Archivo: media/index.js → sección toolbox, categoría OOP
+  Solución: eliminar del toolbox. Sus definiciones de bloque siguen existentes
+            en el archivo pero no se muestran al usuario. El modificador ya
+            está cubierto mediante FieldDropdown en attribute_declaration y
+            method_definition.
+
+
+// ============================================================
+// BLOQUES PENDIENTES DE REVISAR (identificados, no reparados)
+// ============================================================
+
+[A] HashMap - operaciones
+  Estado: solo se genera la declaración (HashMap<K,V> nombre = new HashMap<>())
+          pero no hay bloques para put(), get(), remove(), containsKey(), etc.
+
+[B] Scanner - declaración automática
+  Estado: los bloques input_read_int / input_read_string / input_read_double
+          generan scanner.nextInt() etc. pero no añaden automáticamente
+          Scanner scanner = new Scanner(System.in); al inicio del main.
+          El usuario debe añadirlo manualmente o con un bloque de código.
+
+[C] for-each (enhanced for)
+  Estado: no existe bloque para   for (Tipo elemento : coleccion) { }
