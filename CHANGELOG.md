@@ -3,6 +3,13 @@
 All notable changes to PACO will be documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.3.1] – 2026-04-24
+
+### Fixed
+- Activity bar icon: replaced large PNG with optimized SVG icon
+
+---
+
 ## [0.3.0] – 2026-04-24
 
 ### Added
