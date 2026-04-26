@@ -1,12 +1,13 @@
-import { IRNode, IRExpr, IRRepeat, IRIf, IRWhile, IRFor, IRForever, IRSwitch, IRPrint, IRVarAssign, IRVarChange, IRVarRef, IRUnaryOp, IRString, IRRandom, IRComment, IRVarDeclaration, IRVarDeclarationInit, IRVarIncrement, IRVarDecrement, IRArrayDeclaration, IRArrayAccess, IRArrayAssignment, IRArrayLength, IRFunctionDefinition, IRFunctionCall, IRReturn, IRClassDefinition, IRInterfaceDefinition, IRTextConcat, IRTextLength, IRTextSubstring, IRInputRead, IRTryCatchFinally, IRThrow, IRWaitSeconds, IRWaitUntil, IRListDeclaration, IRListAdd, IRListRemove, IRListClear, IRListInsert, IRListSet, IRMapDeclaration, IREnumDefinition, IRThreadCreate, IRSynchronized, IRImport, IRCodeTemplate, IRBroadcast, IRBroadcastWait, IRWhenReceive, IRTernary, IRCharAt, IRTextContains, IRListGet, IRListSize, IRListContains, IRNewObject, IRLambda, IRStreamFilter, IRFunctionCallExpr } from '../ir/nodes';
+import { IRNode, IRExpr, IRRepeat, IRIf, IRWhile, IRFor, IRForever, IRSwitch, IRPrint, IRVarAssign, IRVarChange, IRVarRef, IRUnaryOp, IRString, IRRandom, IRComment, IRVarDeclaration, IRVarDeclarationInit, IRVarIncrement, IRVarDecrement, IRArrayDeclaration, IRArrayAccess, IRArrayAssignment, IRArrayLength, IRFunctionDefinition, IRFunctionCall, IRReturn, IRClassDefinition, IRInterfaceDefinition, IRTextConcat, IRTextLength, IRTextSubstring, IRInputRead, IRTryCatchFinally, IRThrow, IRWaitSeconds, IRWaitUntil, IRListDeclaration, IRListAdd, IRListRemove, IRListClear, IRListInsert, IRListSet, IRMapDeclaration, IRMapPut, IRMapRemove, IRMapGet, IRMapContainsKey, IREnumDefinition, IRThreadCreate, IRSynchronized, IRImport, IRCodeTemplate, IRBroadcast, IRBroadcastWait, IRWhenReceive, IRTernary, IRCharAt, IRTextContains, IRListGet, IRListSize, IRListContains, IRNewObject, IRLambda, IRStreamFilter, IRFunctionCallExpr } from '../ir/nodes';
 
-/**
- * Convierte una lista de nodos IR en código Java (solo el cuerpo).
- */
 export function irToJava(nodes: IRNode[]): string {
   const declared = new Set<string>();
   const ctx = { loopCounter: 0 };
-  return emitNodes(nodes, declared, ctx);
+  const body = emitNodes(nodes, declared, ctx);
+  if (body.includes('scanner.')) {
+    return 'Scanner scanner = new Scanner(System.in);\n' + body;
+  }
+  return body;
 }
 
 function emitNodes(nodes: IRNode[], declared: Set<string>, ctx: { loopCounter: number }): string {
@@ -172,6 +173,14 @@ function emitNodes(nodes: IRNode[], declared: Set<string>, ctx: { loopCounter: n
         out += emitMapDeclaration(node as IRMapDeclaration, declared, ctx);
         break;
 
+      case 'map_put':
+        out += `${safeId((node as IRMapPut).mapName)}.put(${emitExpr((node as IRMapPut).key, declared)}, ${emitExpr((node as IRMapPut).value, declared)});\n`;
+        break;
+
+      case 'map_remove':
+        out += `${safeId((node as IRMapRemove).mapName)}.remove(${emitExpr((node as IRMapRemove).key, declared)});\n`;
+        break;
+
       case 'enum_definition':
         out += emitEnumDefinition(node as IREnumDefinition, declared, ctx);
         break;
@@ -193,15 +202,13 @@ function emitNodes(nodes: IRNode[], declared: Set<string>, ctx: { loopCounter: n
         break;
 
       default:
-        out += `// TODO: nodo no soportado\n`;
+        out += `// nodo no implementado\n`;
         break;
     }
   }
 
   return out;
 }
-
-// ---------- EMISORES DE NODOS ----------
 
 function emitRepeat(node: IRRepeat, declared: Set<string>, ctx: { loopCounter: number }): string {
   const timesCode = emitExpr(node.times, declared);
@@ -227,7 +234,6 @@ function emitIf(node: IRIf, declared: Set<string>, ctx: { loopCounter: number })
   if (node.elseBody && node.elseBody.length > 0) {
     const elseCode = emitNodes(node.elseBody, declared, ctx);
 
-    // Para no poner "else { if () { ... } }" sino "else if () { ... }"
     if (node.elseBody.length === 1 && node.elseBody[0].kind === 'if') {
       result = result.trimEnd() + ` else ` + elseCode;
     } else {
@@ -252,7 +258,6 @@ function emitWhile(node: IRWhile, declared: Set<string>, ctx: { loopCounter: num
 }
 
 function emitFor(node: IRFor, declared: Set<string>, ctx: { loopCounter: number }): string {
-  // Scope nuevo para que la variable del for no contamine el ámbito exterior (Bug 5)
   const forDeclared = new Set(declared);
   const initCode = node.init ? emitNodes([node.init], forDeclared, ctx).trim().replace(/;$/, '') : '';
   const condCode = node.condition ? emitExpr(node.condition, forDeclared) : 'true';
@@ -459,12 +464,10 @@ function emitVarChange(node: IRVarChange, declared: Set<string>, ctx: { loopCoun
 
   if (!declared.has(name)) {
     declared.add(name);
-    return `double ${name} = ${valueCode};\n`; // Scratch crea var si no existe
+    return `double ${name} = ${valueCode};\n`;
   }
   return `${name} += ${valueCode};\n`;
 }
-
-// ---------- EMISOR DE EXPRESIONES ----------
 
 function emitExpr(expr: IRExpr, declared: Set<string>): string {
   if (!expr) {
@@ -550,6 +553,14 @@ function emitExpr(expr: IRExpr, declared: Set<string>): string {
       const lc = expr as IRListContains;
       return `${safeId(lc.listName)}.contains(${emitExpr(lc.value, declared)})`;
 
+    case 'map_get':
+      const mg = expr as IRMapGet;
+      return `${safeId(mg.mapName)}.get(${emitExpr(mg.key, declared)})`;
+
+    case 'map_contains_key':
+      const mck = expr as IRMapContainsKey;
+      return `${safeId(mck.mapName)}.containsKey(${emitExpr(mck.key, declared)})`;
+
     case 'new_object':
       const no = expr as IRNewObject;
       const noArgs = no.args.map(a => emitExpr(a, declared)).join(', ');
@@ -580,15 +591,12 @@ function emitExpr(expr: IRExpr, declared: Set<string>): string {
   }
 }
 
-// ---------- EMISOR DE EXPRESIONES BOOLEANAS ----------
-
 function emitBooleanExpr(expr: IRExpr, declared: Set<string>): string {
   const code = emitExpr(expr, declared);
   switch (expr.kind) {
     case 'boolean':
       return code;
     case 'binary_op':
-      // Operadores que ya devuelven boolean
       if (['==', '!=', '<', '>', '<=', '>=', '&&', '||', '.equals'].includes(expr.op)) {
         return code;
       }
@@ -607,8 +615,6 @@ function emitBooleanExpr(expr: IRExpr, declared: Set<string>): string {
       return code;
   }
 }
-
-// ---------- Helper para identar texto ----------
 
 function indent(text: string, level: number): string {
   if (!text) {

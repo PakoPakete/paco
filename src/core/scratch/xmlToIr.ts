@@ -1,4 +1,3 @@
-// src/core/scratch/xmlToIr.ts
 import { DOMParser } from 'xmldom';
 import {
   IRNode,
@@ -50,6 +49,10 @@ import {
   IRListInsert,
   IRListSet,
   IRMapDeclaration,
+  IRMapPut,
+  IRMapRemove,
+  IRMapGet,
+  IRMapContainsKey,
   IREnumDefinition,
   IRThreadCreate,
   IRSynchronized,
@@ -73,13 +76,9 @@ import {
   IRFunctionCallExpr,
 } from '../ir/nodes';
 
-/**
- * Punto de entrada: toma el XML que mandas desde la webview
- * y devuelve una lista de nodos IRNode.
- */
 export function xmlToIr(xml: string): IRNode[] {
   const doc = new DOMParser().parseFromString(xml, 'text/xml');
-  const root = doc.documentElement; // <xml ...>
+  const root = doc.documentElement;
 
   let result: IRNode[] = [];
 
@@ -95,8 +94,6 @@ export function xmlToIr(xml: string): IRNode[] {
 
   return result;
 }
-
-// ---------- Parsers de SECUENCIAS ----------
 
 function parseBlockSequence(firstBlock: Element | null): IRNode[] {
   const result: IRNode[] = [];
@@ -153,9 +150,8 @@ function parseBlockSequence(firstBlock: Element | null): IRNode[] {
       } else if (type === 'controls_return' || type === 'function_return_value') {
         result.push(parseReturn(current));
       }
-      // Eventos
       else if (type === 'event_green_flag') {
-        // No-op: the main wrapper handles it
+        // ignorado intencionalmente
       } else if (type === 'event_broadcast') {
         result.push(parseBroadcast(current));
       } else if (type === 'event_broadcast_wait') {
@@ -163,7 +159,6 @@ function parseBlockSequence(firstBlock: Element | null): IRNode[] {
       } else if (type === 'event_when_receive') {
         result.push(parseWhenReceive(current));
       }
-      // Control
       else if (type === 'controls_wait_seconds') {
         result.push(parseWaitSeconds(current));
       } else if (type === 'controls_wait_until') {
@@ -171,13 +166,11 @@ function parseBlockSequence(firstBlock: Element | null): IRNode[] {
       } else if (type === 'controls_stop') {
         result.push(parseStop(current));
       }
-      // Manejo de errores
       else if (type === 'try_catch_finally') {
         result.push(parseTryCatchFinally(current));
       } else if (type === 'throw_exception') {
         result.push(parseThrow(current));
       }
-      // Listas / Colecciones
       else if (type === 'list_declaration') {
         result.push(parseListDeclaration(current));
       } else if (type === 'list_add') {
@@ -191,15 +184,16 @@ function parseBlockSequence(firstBlock: Element | null): IRNode[] {
       } else if (type === 'list_set') {
         result.push(parseListSet(current));
       }
-      // Map
       else if (type === 'map_declaration') {
         result.push(parseMapDeclaration(current));
+      } else if (type === 'map_put') {
+        result.push(parseMapPut(current));
+      } else if (type === 'map_remove') {
+        result.push(parseMapRemove(current));
       }
-      // Enum
       else if (type === 'enum_definition') {
         result.push(parseEnumDefinition(current));
       }
-      // OOP
       else if (type === 'class_definition') {
         result.push(parseClassDefinition(current));
       } else if (type === 'class_extends') {
@@ -215,11 +209,9 @@ function parseBlockSequence(firstBlock: Element | null): IRNode[] {
       } else if (type === 'constructor_definition') {
         result.push(parseConstructorDefinition(current));
       }
-      // Funcional
       else if (type === 'generic_function') {
         result.push(parseGenericFunction(current));
       }
-      // Concurrencia
       else if (type === 'thread_create') {
         result.push(parseThreadCreate(current));
       } else if (type === 'synchronized_block') {
@@ -227,7 +219,6 @@ function parseBlockSequence(firstBlock: Element | null): IRNode[] {
       } else if (type === 'parallel_exec') {
         result.push(parseParallelExec(current));
       }
-      // E/S
       else if (type === 'file_read') {
         result.push(parseFileRead(current));
       } else if (type === 'file_write') {
@@ -239,11 +230,9 @@ function parseBlockSequence(firstBlock: Element | null): IRNode[] {
       } else if (type === 'db_connect') {
         result.push(parseDbConnect(current));
       }
-      // Sistema
       else if (type === 'system_reset_timer') {
         result.push({ kind: 'code_template', code: 'long timerStart = System.currentTimeMillis();' } as IRCodeTemplate);
       }
-      // Librerías
       else if (type === 'import_library') {
         result.push(parseImport(current));
       } else if (type === 'desktop_app') {
@@ -253,7 +242,6 @@ function parseBlockSequence(firstBlock: Element | null): IRNode[] {
       } else if (type === 'web_service') {
         result.push(parseWebService(current));
       }
-      // Avanzado
       else if (type === 'reflection') {
         result.push(parseReflection(current));
       } else if (type === 'garbage_collect') {
@@ -261,7 +249,6 @@ function parseBlockSequence(firstBlock: Element | null): IRNode[] {
       } else if (type === 'interop_language') {
         result.push(parseInterop(current));
       }
-      // Variable show
       else if (type === 'variable_show') {
         result.push(parseVariableShow(current));
       }
@@ -290,10 +277,7 @@ function getNextBlock(block: Element): Element | null {
   return null;
 }
 
-// ---------- Parsers de NODOS (sentencias) ----------
-
 function parseRepeat(block: Element): IRRepeat {
-  // controls_repeat_ext usa <value name="TIMES">, controls_repeat usa <field name="TIMES">
   const timesValue = findValue(block, 'TIMES');
   let timesExpr: IRExpr;
   if (timesValue) {
@@ -388,14 +372,12 @@ function parseVarChange(block: Element): IRVarChange {
 }
 
 function parseWhile(block: Element): IRWhile {
-  // Blockly controls_whileUntil: MODE = WHILE | UNTIL
   const modeField = firstField(block);
   const mode = modeField ? modeField.textContent || 'WHILE' : 'WHILE';
 
   const condValue = findValue(block, 'BOOL') || firstValue(block);
   let condExpr = condValue ? parseExprFromValue(condValue) : booleanLiteral(false);
 
-  // Si es UNTIL, invertir condición: repeat until (cond) -> while (!cond)
   if (mode === 'UNTIL') {
     condExpr = {
       kind: 'unary_op',
@@ -416,7 +398,6 @@ function parseWhile(block: Element): IRWhile {
 
 function parseSay(block: Element): IRPrint {
   const msgValue = findValue(block, 'TEXT') || firstValue(block);
-  // Default to empty string if node missing
   const msgExpr = msgValue ? parseExprFromValue(msgValue) : stringLiteral('');
 
   return {
@@ -424,8 +405,6 @@ function parseSay(block: Element): IRPrint {
     value: msgExpr,
   };
 }
-
-// ---------- Parsers de EXPRESIONES ----------
 
 function parseExprFromValue(valueNode: Element): IRExpr {
   const innerBlock = getBlockOrShadowFromValue(valueNode);
@@ -535,7 +514,6 @@ function parseExprFromBlock(block: Element): IRExpr {
     return booleanLiteral(val);
   }
 
-  // Comparaciones lógicas (==, <, >, etc.)
   if (type === 'logic_compare') {
     const opField = firstField(block);
     const opToken = opField ? opField.textContent || 'EQ' : 'EQ';
@@ -556,7 +534,6 @@ function parseExprFromBlock(block: Element): IRExpr {
     } as IRBinaryOp;
   }
 
-  // Referencia a variable: "x"
   if (type === 'variables_get') {
     const field = firstField(block);
     const name = field ? field.textContent || 'var' : 'var';
@@ -566,7 +543,6 @@ function parseExprFromBlock(block: Element): IRExpr {
     } as IRVarRef;
   }
 
-  // Input/Entrada de datos
   if (type === 'input_read_int') {
     return {
       kind: 'input_read',
@@ -588,7 +564,6 @@ function parseExprFromBlock(block: Element): IRExpr {
     } as IRInputRead;
   }
 
-  // Operaciones de texto
   if (type === 'text_concat') {
     const aValue = findValue(block, 'A') || firstValue(block);
     const bValue = findValue(block, 'B');
@@ -662,7 +637,6 @@ function parseExprFromBlock(block: Element): IRExpr {
     } as IRUnaryOp;
   }
 
-  // Módulo
   if (type === 'math_modulo') {
     const aValue = findValue(block, 'A') || firstValue(block);
     const bValue = findValue(block, 'B');
@@ -671,14 +645,12 @@ function parseExprFromBlock(block: Element): IRExpr {
     return { kind: 'binary_op', op: '%', left, right } as IRBinaryOp;
   }
 
-  // Round
   if (type === 'math_round') {
     const numValue = findValue(block, 'NUM') || firstValue(block);
     const expr = numValue ? parseExprFromValue(numValue) : numberLiteral(0);
     return { kind: 'unary_op', op: 'Math.round', expr } as IRUnaryOp;
   }
 
-  // Ternario
   if (type === 'ternary_operator') {
     const condVal = findValue(block, 'CONDITION') || firstValue(block);
     const ifTrueVal = findValue(block, 'IF_TRUE');
@@ -689,7 +661,6 @@ function parseExprFromBlock(block: Element): IRExpr {
     return { kind: 'ternary', condition, ifTrue, ifFalse } as IRTernary;
   }
 
-  // charAt
   if (type === 'text_char_at') {
     const textVal = findValue(block, 'TEXT');
     const indexVal = findValue(block, 'INDEX') || firstValue(block);
@@ -698,7 +669,6 @@ function parseExprFromBlock(block: Element): IRExpr {
     return { kind: 'char_at', text, index } as IRCharAt;
   }
 
-  // text contains
   if (type === 'text_contains') {
     const textVal = findValue(block, 'TEXT') || firstValue(block);
     const searchVal = findValue(block, 'SEARCH');
@@ -707,7 +677,6 @@ function parseExprFromBlock(block: Element): IRExpr {
     return { kind: 'text_contains', text, search } as IRTextContains;
   }
 
-  // List get
   if (type === 'list_get') {
     const listField = findFieldByName(block, 'LIST');
     const listName = listField ? listField.textContent || 'lista' : 'lista';
@@ -716,14 +685,12 @@ function parseExprFromBlock(block: Element): IRExpr {
     return { kind: 'list_get', listName, index } as IRListGet;
   }
 
-  // List size
   if (type === 'list_size') {
     const listField = findFieldByName(block, 'LIST');
     const listName = listField ? listField.textContent || 'lista' : 'lista';
     return { kind: 'list_size', listName } as IRListSize;
   }
 
-  // List contains
   if (type === 'list_contains') {
     const listField = findFieldByName(block, 'LIST');
     const listName = listField ? listField.textContent || 'lista' : 'lista';
@@ -732,7 +699,22 @@ function parseExprFromBlock(block: Element): IRExpr {
     return { kind: 'list_contains', listName, value } as IRListContains;
   }
 
-  // Object instantiation
+  if (type === 'map_get') {
+    const mapField = findFieldByName(block, 'MAP');
+    const mapName = mapField ? mapField.textContent || 'mapa' : 'mapa';
+    const keyVal = findValue(block, 'KEY') || firstValue(block);
+    const key = keyVal ? parseExprFromValue(keyVal) : stringLiteral('');
+    return { kind: 'map_get', mapName, key } as IRMapGet;
+  }
+
+  if (type === 'map_contains_key') {
+    const mapField = findFieldByName(block, 'MAP');
+    const mapName = mapField ? mapField.textContent || 'mapa' : 'mapa';
+    const keyVal = findValue(block, 'KEY') || firstValue(block);
+    const key = keyVal ? parseExprFromValue(keyVal) : stringLiteral('');
+    return { kind: 'map_contains_key', mapName, key } as IRMapContainsKey;
+  }
+
   if (type === 'object_instantiation') {
     const classField = findFieldByName(block, 'CLASS');
     const className = classField ? classField.textContent || 'MiClase' : 'MiClase';
@@ -741,17 +723,14 @@ function parseExprFromBlock(block: Element): IRExpr {
     return { kind: 'new_object', className, args } as IRNewObject;
   }
 
-  // this
   if (type === 'this_reference') {
     return { kind: 'this_ref' } as IRThisRef;
   }
 
-  // Timer
   if (type === 'system_timer') {
     return { kind: 'timer' } as IRTimerExpr;
   }
 
-  // Lambda
   if (type === 'lambda_function') {
     const paramsField = findFieldByName(block, 'PARAMS');
     const paramsStr = paramsField ? paramsField.textContent || 'x' : 'x';
@@ -761,7 +740,6 @@ function parseExprFromBlock(block: Element): IRExpr {
     return { kind: 'lambda', params, body } as IRLambda;
   }
 
-  // Stream filter
   if (type === 'stream_filter') {
     const collField = findFieldByName(block, 'COLLECTION');
     const collection = collField ? collField.textContent || 'lista' : 'lista';
@@ -772,14 +750,12 @@ function parseExprFromBlock(block: Element): IRExpr {
     return { kind: 'stream_filter', collection, variable, condition } as IRStreamFilter;
   }
 
-  // Array length (expression)
   if (type === 'array_length') {
     const nameField = findFieldByName(block, 'VAR');
     const name = nameField ? nameField.textContent || 'arr' : 'arr';
     return { kind: 'array_length', name } as IRArrayLength;
   }
 
-  // Array access (expression)
   if (type === 'array_access') {
     const nameField = findFieldByName(block, 'VAR');
     const name = nameField ? nameField.textContent || 'arr' : 'arr';
@@ -788,7 +764,6 @@ function parseExprFromBlock(block: Element): IRExpr {
     return { kind: 'array_access', name, index } as IRArrayAccess;
   }
 
-  // Function call as expression
   if (type === 'function_call') {
     const nameField = findFieldByName(block, 'NAME');
     const name = nameField ? nameField.textContent || 'func' : 'func';
@@ -797,11 +772,8 @@ function parseExprFromBlock(block: Element): IRExpr {
     return { kind: 'function_call_expr', name, args } as IRFunctionCallExpr;
   }
 
-  // Fallback
   return numberLiteral(0);
 }
-
-// ---------- Helpers XML ----------
 
 function getBlockOrShadowFromValue(valueNode: Element): Element | null {
   let shadow: Element | null = null;
@@ -809,7 +781,7 @@ function getBlockOrShadowFromValue(valueNode: Element): Element | null {
     const child = valueNode.childNodes.item(i) as Element;
     if (child && child.nodeType === 1) {
       if (child.tagName === 'block') {
-        return child; // <block> takes precedence
+        return child;
       }
       if (child.tagName === 'shadow') {
         shadow = child;
@@ -828,8 +800,6 @@ function findValue(block: Element, name: string): Element | null {
   }
   return null;
 }
-
-// ---------- Parsers para nuevos bloques ----------
 
 function parseComment(block: Element): IRComment {
   const field = findFieldByName(block, 'COMMENT');
@@ -900,7 +870,6 @@ function parseFunctionDefinition(block: Element): IRFunctionDefinition {
 }
 
 function parseParameters(stmt: Element): any[] {
-  // Simplificado, asumir lista de parameters
   const params: any[] = [];
   let current: Element | null = null;                        
   for (let i = 0; i < stmt.childNodes.length; i++) {        
@@ -957,7 +926,6 @@ function parseFor(block: Element): IRFor {
     right: toValue ? parseExprFromValue(toValue) : numberLiteral(10)
   };
 
-  // Si hay un paso (BY) distinto del default, usar += ; si no, usar i++
   const byExpr = byValue ? parseExprFromValue(byValue) : null;
   const increment: IRVarIncrement | IRVarChange =
     byExpr && !(byExpr.kind === 'number' && byExpr.value === 1)
@@ -1010,8 +978,6 @@ function parseBreak(_block: Element): IRBreak {
 function parseContinue(_block: Element): IRContinue {
   return { kind: 'continue' };
 }
-
-// ---------- Parsers de nuevos bloques ----------
 
 function parseForever(block: Element): IRForever {
   const bodyStmt = findStatement(block, 'DO');
@@ -1133,6 +1099,24 @@ function parseMapDeclaration(block: Element): IRMapDeclaration {
   const nameField = findFieldByName(block, 'NAME');
   const name = nameField ? nameField.textContent || 'mapa' : 'mapa';
   return { kind: 'map_declaration', keyType, valueType, name };
+}
+
+function parseMapPut(block: Element): IRMapPut {
+  const mapField = findFieldByName(block, 'MAP');
+  const mapName = mapField ? mapField.textContent || 'mapa' : 'mapa';
+  const keyVal = findValue(block, 'KEY');
+  const key = keyVal ? parseExprFromValue(keyVal) : stringLiteral('');
+  const val = findValue(block, 'VALUE');
+  const value = val ? parseExprFromValue(val) : stringLiteral('');
+  return { kind: 'map_put', mapName, key, value };
+}
+
+function parseMapRemove(block: Element): IRMapRemove {
+  const mapField = findFieldByName(block, 'MAP');
+  const mapName = mapField ? mapField.textContent || 'mapa' : 'mapa';
+  const keyVal = findValue(block, 'KEY');
+  const key = keyVal ? parseExprFromValue(keyVal) : stringLiteral('');
+  return { kind: 'map_remove', mapName, key };
 }
 
 function parseEnumDefinition(block: Element): IREnumDefinition {

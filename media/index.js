@@ -197,6 +197,10 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'list_size' },
           { kind: 'block', type: 'list_contains' },
           { kind: 'block', type: 'map_declaration' },
+          { kind: 'block', type: 'map_put' },
+          { kind: 'block', type: 'map_get' },
+          { kind: 'block', type: 'map_remove' },
+          { kind: 'block', type: 'map_contains_key' },
         ]
       },
 
@@ -926,6 +930,49 @@ window.addEventListener('load', () => {
       this.appendValueInput('VALUE').appendField('contiene');
       this.setOutput(true, 'Boolean');
       this.setColour(260);
+    }
+  };
+
+  Blockly.Blocks['map_put'] = {
+    init: function() {
+      this.appendDummyInput().appendField('mapa').appendField(new Blockly.FieldTextInput('mapa'), 'MAP').appendField('put');
+      this.appendValueInput('KEY').setCheck(null).appendField('clave');
+      this.appendValueInput('VALUE').setCheck(null).appendField('valor');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(260);
+      this.setTooltip('mapa.put(clave, valor)');
+    }
+  };
+
+  Blockly.Blocks['map_get'] = {
+    init: function() {
+      this.appendDummyInput().appendField('mapa').appendField(new Blockly.FieldTextInput('mapa'), 'MAP').appendField('get');
+      this.appendValueInput('KEY').setCheck(null).appendField('clave');
+      this.setOutput(true, null);
+      this.setColour(260);
+      this.setTooltip('mapa.get(clave)');
+    }
+  };
+
+  Blockly.Blocks['map_remove'] = {
+    init: function() {
+      this.appendDummyInput().appendField('mapa').appendField(new Blockly.FieldTextInput('mapa'), 'MAP').appendField('remove');
+      this.appendValueInput('KEY').setCheck(null).appendField('clave');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(260);
+      this.setTooltip('mapa.remove(clave)');
+    }
+  };
+
+  Blockly.Blocks['map_contains_key'] = {
+    init: function() {
+      this.appendDummyInput().appendField('mapa').appendField(new Blockly.FieldTextInput('mapa'), 'MAP').appendField('containsKey');
+      this.appendValueInput('KEY').setCheck(null).appendField('clave');
+      this.setOutput(true, 'Boolean');
+      this.setColour(260);
+      this.setTooltip('mapa.containsKey(clave)');
     }
   };
 
