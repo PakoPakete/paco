@@ -2,7 +2,7 @@
   "name": "paco",
   "displayName": "PACO - Visual Java Editor",
   "description": "PACO: visual block editor (Scratch-style) that generates compilable Java code in real time. Learn Java visually.",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "publisher": "FranciscoSZ",
   "license": "MIT",
   "icon": "images/icon.png",
