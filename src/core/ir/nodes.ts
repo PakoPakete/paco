@@ -43,7 +43,12 @@ export type IRNode =
   | IRCodeTemplate
   | IRBroadcast
   | IRBroadcastWait
-  | IRWhenReceive;
+  | IRWhenReceive
+  | IRFileWrite
+  | IREncryptDecrypt
+  | IRDesktopApp
+  | IRMobileApp
+  | IRWebService;
 
 export type IRExpr =
   | IRNumber
@@ -186,7 +191,7 @@ export interface IRUnaryOp {
 
 export interface IRBinaryOp {
   kind: 'binary_op';
-  op: string;      // '+', '-', '*', '/', '&&', '||', etc.
+  op: string;
   left: IRExpr;
   right: IRExpr;
 }
@@ -215,8 +220,8 @@ export interface IRBoolean {
 
 export interface IRRepeat {
   kind: 'repeat';
-  times: IRExpr;    // cuántas veces
-  body: IRNode[];   // lista de instrucciones dentro del bucle
+  times: IRExpr;
+  body: IRNode[];
 }
 
 export interface IRIf {
@@ -318,6 +323,7 @@ export interface IRWaitUntil {
 
 export interface IRStop {
   kind: 'stop';
+  mode: string;
 }
 
 export interface IRTryCatchFinally {
@@ -511,4 +517,35 @@ export interface IRFunctionCallExpr {
   kind: 'function_call_expr';
   name: string;
   args: IRExpr[];
+}
+
+export interface IRFileWrite {
+  kind: 'file_write';
+  path: string;
+  content: IRExpr;
+}
+
+export interface IREncryptDecrypt {
+  kind: 'encrypt_decrypt';
+  mode: string;
+  key: string;
+  data: IRExpr;
+}
+
+export interface IRDesktopApp {
+  kind: 'desktop_app';
+  title: string;
+  body: IRNode[];
+}
+
+export interface IRMobileApp {
+  kind: 'mobile_app';
+  name: string;
+  body: IRNode[];
+}
+
+export interface IRWebService {
+  kind: 'web_service';
+  path: string;
+  body: IRNode[];
 }

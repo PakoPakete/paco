@@ -1,4 +1,3 @@
-// src/extension.ts
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 
@@ -10,7 +9,6 @@ let javaDocuments = new Map<vscode.WebviewPanel, vscode.TextDocument>();
 let panelCounter = 0;
 
 export function activate(context: vscode.ExtensionContext) {
-    // Registrar la vista de la barra lateral (muestra el botón de bienvenida)
     vscode.window.registerTreeDataProvider('pacoView', {
         getTreeItem: (el: vscode.TreeItem) => el,
         getChildren: () => []
@@ -19,7 +17,6 @@ export function activate(context: vscode.ExtensionContext) {
     const disposable = vscode.commands.registerCommand('paco.openEditor', async () => {
         panelCounter++;
 
-        // Crear un nuevo panel cada vez con viewType único
         const viewType = `pacoEditor_${panelCounter}`;
         const panel = vscode.window.createWebviewPanel(
             viewType,
@@ -35,7 +32,6 @@ export function activate(context: vscode.ExtensionContext) {
 
         currentPanels.push(panel);
 
-        // Crear un documento Java único para este panel
         const javaDoc = await vscode.workspace.openTextDocument({
             language: 'java',
             content: '',
@@ -54,7 +50,6 @@ export function activate(context: vscode.ExtensionContext) {
         panel.webview.onDidReceiveMessage(
             async (message) => {
                 if (message.type === 'PROMPT') {
-                    // Blockly necesita prompt() para crear variables, relay a VS Code
                     const result = await vscode.window.showInputBox({
                         prompt: message.payload?.message ?? 'Nombre de variable',
                         value: message.payload?.defaultValue ?? '',
@@ -69,10 +64,8 @@ export function activate(context: vscode.ExtensionContext) {
                     try {
                         const xml: string = message.payload?.xml ?? '';
 
-                        // 1) XML → IR
                         const irNodes = xmlToIr(xml);
 
-                        // 2) Separar imports, clases/interfaces/enums del cuerpo principal
                         const imports: string[] = [];
                         const outerBlocks: typeof irNodes = [];
                         const mainBody: typeof irNodes = [];
@@ -92,14 +85,11 @@ export function activate(context: vscode.ExtensionContext) {
                             }
                         }
 
-                        // 3) IR → Java
                         const body = irToJava(mainBody);
                         const outerCode = irToJava(outerBlocks);
 
-                        // 4) Envolvemos en clase + main con imports
                         const fullJava = wrapJava(body, imports, outerCode);
 
-                        // 4) Actualizamos el documento Java correspondiente a este panel
                         const doc = javaDocuments.get(panel);
                         if (doc) {
                             const edit = new vscode.WorkspaceEdit();
@@ -119,7 +109,6 @@ export function activate(context: vscode.ExtensionContext) {
             context.subscriptions
         );
 
-        // Limpiar el panel cuando se cierre
         panel.onDidDispose(() => {
             currentPanels = currentPanels.filter(p => p !== panel);
             javaDocuments.delete(panel);
@@ -131,12 +120,9 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() { }
 
-// ---------- Helpers para envolver y identar ----------
-
 function wrapJava(body: string, imports: string[] = [], outerCode: string = ''): string {
     let result = '';
 
-    // Imports
     if (imports.length > 0) {
         result += imports.map(i => `import ${i};`).join('\n') + '\n\n';
     }
@@ -147,7 +133,6 @@ ${indent(body, 2)}
     }
 `;
 
-    // Métodos y clases internas fuera del main pero dentro de la clase
     if (outerCode.trim()) {
         result += '\n' + indent(outerCode, 1);
     }

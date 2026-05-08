@@ -74,6 +74,11 @@ import {
   IRLambda,
   IRStreamFilter,
   IRFunctionCallExpr,
+  IRFileWrite,
+  IREncryptDecrypt,
+  IRDesktopApp,
+  IRMobileApp,
+  IRWebService,
 } from '../ir/nodes';
 
 export function xmlToIr(xml: string): IRNode[] {
@@ -151,7 +156,6 @@ function parseBlockSequence(firstBlock: Element | null): IRNode[] {
         result.push(parseReturn(current));
       }
       else if (type === 'event_green_flag') {
-        // ignorado intencionalmente
       } else if (type === 'event_broadcast') {
         result.push(parseBroadcast(current));
       } else if (type === 'event_broadcast_wait') {
@@ -217,7 +221,7 @@ function parseBlockSequence(firstBlock: Element | null): IRNode[] {
       } else if (type === 'synchronized_block') {
         result.push(parseSynchronized(current));
       } else if (type === 'parallel_exec') {
-        result.push(parseParallelExec(current));
+        result.push(...parseParallelExec(current));
       }
       else if (type === 'file_read') {
         result.push(parseFileRead(current));
@@ -417,6 +421,16 @@ function parseExprFromValue(valueNode: Element): IRExpr {
 
 function parseExprFromBlock(block: Element): IRExpr {
   const type = block.getAttribute('type');
+
+  if (type === 'type_int') { return stringLiteral('int'); }
+  if (type === 'type_double') { return stringLiteral('double'); }
+  if (type === 'type_boolean') { return stringLiteral('boolean'); }
+  if (type === 'type_string') { return stringLiteral('String'); }
+  if (type === 'type_char') { return stringLiteral('char'); }
+  if (type === 'type_void') { return stringLiteral('void'); }
+  if (type === 'modifier_public') { return stringLiteral('public'); }
+  if (type === 'modifier_private') { return stringLiteral('private'); }
+  if (type === 'modifier_protected') { return stringLiteral('protected'); }
 
   if (type === 'math_number') {
     const field = firstField(block);
@@ -1017,8 +1031,10 @@ function parseWaitUntil(block: Element): IRWaitUntil {
   return { kind: 'wait_until', condition };
 }
 
-function parseStop(_block: Element): IRStop {
-  return { kind: 'stop' };
+function parseStop(block: Element): IRStop {
+  const modeField = findFieldByName(block, 'MODE');
+  const mode = modeField ? modeField.textContent || 'THIS' : 'THIS';
+  return { kind: 'stop', mode };
 }
 
 function parseTryCatchFinally(block: Element): IRTryCatchFinally {
@@ -1037,7 +1053,7 @@ function parseTryCatchFinally(block: Element): IRTryCatchFinally {
 
 function parseThrow(block: Element): IRThrow {
   const val = findValue(block, 'EXCEPTION') || firstValue(block);
-  const expr = val ? parseExprFromValue(val) : stringLiteral('Exception');
+  const expr = val ? parseExprFromValue(val) : { kind: 'new_object', className: 'RuntimeException', args: [] } as IRNewObject;
   return { kind: 'throw', expr };
 }
 
@@ -1319,11 +1335,15 @@ function parseSynchronized(block: Element): IRSynchronized {
   return { kind: 'synchronized', lock, body };
 }
 
-function parseParallelExec(_block: Element): IRCodeTemplate {
-  return {
-    kind: 'code_template',
-    code: `Thread t1 = new Thread(() -> {\n    // Tarea 1\n});\nThread t2 = new Thread(() -> {\n    // Tarea 2\n});\nt1.start();\nt2.start();`
-  } as IRCodeTemplate;
+function parseParallelExec(block: Element): IRThreadCreate[] {
+  const task1Stmt = findStatement(block, 'TASK1');
+  const task2Stmt = findStatement(block, 'TASK2');
+  const body1 = task1Stmt ? parseStatementBody(task1Stmt) : [];
+  const body2 = task2Stmt ? parseStatementBody(task2Stmt) : [];
+  return [
+    { kind: 'thread_create', name: 't1', body: body1 } as IRThreadCreate,
+    { kind: 'thread_create', name: 't2', body: body2 } as IRThreadCreate,
+  ];
 }
 
 function parseArrayInitialization(block: Element): IRCodeTemplate {
@@ -1346,13 +1366,12 @@ function parseFileRead(block: Element): IRCodeTemplate {
   };
 }
 
-function parseFileWrite(block: Element): IRCodeTemplate {
+function parseFileWrite(block: Element): IRFileWrite {
   const pathField = findFieldByName(block, 'PATH');
   const path = pathField ? pathField.textContent || 'archivo.txt' : 'archivo.txt';
-  return {
-    kind: 'code_template',
-    code: `java.nio.file.Files.writeString(java.nio.file.Paths.get("${path}"), contenido);`
-  };
+  const contentVal = findValue(block, 'CONTENT');
+  const content = contentVal ? parseExprFromValue(contentVal) : stringLiteral('');
+  return { kind: 'file_write', path, content };
 }
 
 function parseUrlConnection(block: Element): IRCodeTemplate {
@@ -1364,16 +1383,14 @@ function parseUrlConnection(block: Element): IRCodeTemplate {
   };
 }
 
-function parseEncryptDecrypt(block: Element): IRCodeTemplate {
+function parseEncryptDecrypt(block: Element): IREncryptDecrypt {
   const modeField = findFieldByName(block, 'MODE');
   const mode = modeField ? modeField.textContent || 'ENCRYPT' : 'ENCRYPT';
   const keyField = findFieldByName(block, 'KEY');
   const key = keyField ? keyField.textContent || 'clave' : 'clave';
-  const op = mode === 'ENCRYPT' ? 'Cipher.ENCRYPT_MODE' : 'Cipher.DECRYPT_MODE';
-  return {
-    kind: 'code_template',
-    code: `javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES");\ncipher.init(${op}, new javax.crypto.spec.SecretKeySpec("${key}".getBytes(), "AES"));`
-  };
+  const dataVal = findValue(block, 'DATA');
+  const data = dataVal ? parseExprFromValue(dataVal) : stringLiteral('');
+  return { kind: 'encrypt_decrypt', mode, key, data };
 }
 
 function parseDbConnect(block: Element): IRCodeTemplate {
@@ -1395,31 +1412,28 @@ function parseImport(block: Element): IRImport {
   return { kind: 'import', library };
 }
 
-function parseDesktopApp(block: Element): IRCodeTemplate {
+function parseDesktopApp(block: Element): IRDesktopApp {
   const titleField = findFieldByName(block, 'TITLE');
   const title = titleField ? titleField.textContent || 'Mi App' : 'Mi App';
-  return {
-    kind: 'code_template',
-    code: `javax.swing.JFrame frame = new javax.swing.JFrame("${title}");\nframe.setSize(400, 300);\nframe.setDefaultCloseOperation(javax.swing.JFrame.EXIT_ON_CLOSE);\nframe.setVisible(true);`
-  };
+  const bodyStmt = findStatement(block, 'BODY');
+  const body = bodyStmt ? parseStatementBody(bodyStmt) : [];
+  return { kind: 'desktop_app', title, body };
 }
 
-function parseMobileApp(block: Element): IRCodeTemplate {
+function parseMobileApp(block: Element): IRMobileApp {
   const nameField = findFieldByName(block, 'NAME');
   const name = nameField ? nameField.textContent || 'MiApp' : 'MiApp';
-  return {
-    kind: 'code_template',
-    code: `// Android Activity: ${name}\n// public class ${name} extends AppCompatActivity {\n//     @Override protected void onCreate(Bundle savedInstanceState) {\n//         super.onCreate(savedInstanceState);\n//         setContentView(R.layout.activity_main);\n//     }\n// }`
-  };
+  const bodyStmt = findStatement(block, 'BODY');
+  const body = bodyStmt ? parseStatementBody(bodyStmt) : [];
+  return { kind: 'mobile_app', name, body };
 }
 
-function parseWebService(block: Element): IRCodeTemplate {
+function parseWebService(block: Element): IRWebService {
   const pathField = findFieldByName(block, 'PATH');
   const path = pathField ? pathField.textContent || '/api/hola' : '/api/hola';
-  return {
-    kind: 'code_template',
-    code: `// Spring Boot REST Controller\n// @RestController\n// public class ApiController {\n//     @GetMapping("${path}")\n//     public String endpoint() {\n//         return "Hola desde ${path}";\n//     }\n// }`
-  };
+  const bodyStmt = findStatement(block, 'BODY');
+  const body = bodyStmt ? parseStatementBody(bodyStmt) : [];
+  return { kind: 'web_service', path, body };
 }
 
 function parseReflection(block: Element): IRCodeTemplate {

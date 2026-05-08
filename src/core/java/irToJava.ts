@@ -1,11 +1,11 @@
-import { IRNode, IRExpr, IRRepeat, IRIf, IRWhile, IRFor, IRForever, IRSwitch, IRPrint, IRVarAssign, IRVarChange, IRVarRef, IRUnaryOp, IRString, IRRandom, IRComment, IRVarDeclaration, IRVarDeclarationInit, IRVarIncrement, IRVarDecrement, IRArrayDeclaration, IRArrayAccess, IRArrayAssignment, IRArrayLength, IRFunctionDefinition, IRFunctionCall, IRReturn, IRClassDefinition, IRInterfaceDefinition, IRTextConcat, IRTextLength, IRTextSubstring, IRInputRead, IRTryCatchFinally, IRThrow, IRWaitSeconds, IRWaitUntil, IRListDeclaration, IRListAdd, IRListRemove, IRListClear, IRListInsert, IRListSet, IRMapDeclaration, IRMapPut, IRMapRemove, IRMapGet, IRMapContainsKey, IREnumDefinition, IRThreadCreate, IRSynchronized, IRImport, IRCodeTemplate, IRBroadcast, IRBroadcastWait, IRWhenReceive, IRTernary, IRCharAt, IRTextContains, IRListGet, IRListSize, IRListContains, IRNewObject, IRLambda, IRStreamFilter, IRFunctionCallExpr } from '../ir/nodes';
+import { IRNode, IRExpr, IRRepeat, IRIf, IRWhile, IRFor, IRForever, IRSwitch, IRPrint, IRVarAssign, IRVarChange, IRVarRef, IRUnaryOp, IRString, IRRandom, IRComment, IRVarDeclaration, IRVarDeclarationInit, IRVarIncrement, IRVarDecrement, IRArrayDeclaration, IRArrayAccess, IRArrayAssignment, IRArrayLength, IRFunctionDefinition, IRFunctionCall, IRReturn, IRClassDefinition, IRInterfaceDefinition, IRTextConcat, IRTextLength, IRTextSubstring, IRInputRead, IRTryCatchFinally, IRThrow, IRWaitSeconds, IRWaitUntil, IRStop, IRListDeclaration, IRListAdd, IRListRemove, IRListClear, IRListInsert, IRListSet, IRMapDeclaration, IRMapPut, IRMapRemove, IRMapGet, IRMapContainsKey, IREnumDefinition, IRThreadCreate, IRSynchronized, IRImport, IRCodeTemplate, IRBroadcast, IRBroadcastWait, IRWhenReceive, IRTernary, IRCharAt, IRTextContains, IRListGet, IRListSize, IRListContains, IRNewObject, IRLambda, IRStreamFilter, IRFunctionCallExpr, IRFileWrite, IREncryptDecrypt, IRDesktopApp, IRMobileApp, IRWebService } from '../ir/nodes';
 
 export function irToJava(nodes: IRNode[]): string {
   const declared = new Set<string>();
   const ctx = { loopCounter: 0 };
   const body = emitNodes(nodes, declared, ctx);
   if (body.includes('scanner.')) {
-    return 'Scanner scanner = new Scanner(System.in);\n' + body;
+    return 'java.util.Scanner scanner = new java.util.Scanner(System.in);\n' + body;
   }
   return body;
 }
@@ -121,9 +121,11 @@ function emitNodes(nodes: IRNode[], declared: Set<string>, ctx: { loopCounter: n
         out += emitWaitUntil(node as IRWaitUntil, declared, ctx);
         break;
 
-      case 'stop':
-        out += 'System.exit(0);\n';
+      case 'stop': {
+        const stopNode = node as IRStop;
+        out += stopNode.mode === 'ALL' ? 'System.exit(0);\n' : 'return;\n';
         break;
+      }
 
       case 'try_catch_finally':
         out += emitTryCatchFinally(node as IRTryCatchFinally, declared, ctx);
@@ -201,8 +203,49 @@ function emitNodes(nodes: IRNode[], declared: Set<string>, ctx: { loopCounter: n
         out += `${(node as IRCodeTemplate).code}\n`;
         break;
 
+      case 'file_write': {
+        const fw = node as IRFileWrite;
+        const content = emitExpr(fw.content, declared);
+        out += `try { java.nio.file.Files.writeString(java.nio.file.Paths.get("${fw.path}"), ${content}); } catch (java.io.IOException e) { e.printStackTrace(); }\n`;
+        break;
+      }
+
+      case 'encrypt_decrypt': {
+        const ed = node as IREncryptDecrypt;
+        const data = emitExpr(ed.data, declared);
+        const op = ed.mode === 'ENCRYPT' ? 'javax.crypto.Cipher.ENCRYPT_MODE' : 'javax.crypto.Cipher.DECRYPT_MODE';
+        out += `javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES");\n`;
+        out += `cipher.init(${op}, new javax.crypto.spec.SecretKeySpec("${ed.key}".getBytes(), "AES"));\n`;
+        out += `byte[] result = cipher.doFinal(${data}.getBytes(java.nio.charset.StandardCharsets.UTF_8));\n`;
+        break;
+      }
+
+      case 'desktop_app': {
+        const da = node as IRDesktopApp;
+        const daBody = emitNodes(da.body, declared, ctx);
+        out += `javax.swing.JFrame frame = new javax.swing.JFrame("${da.title}");\n`;
+        out += `frame.setSize(400, 300);\n`;
+        out += `frame.setDefaultCloseOperation(javax.swing.JFrame.EXIT_ON_CLOSE);\n`;
+        out += daBody;
+        out += `frame.setVisible(true);\n`;
+        break;
+      }
+
+      case 'mobile_app': {
+        const ma = node as IRMobileApp;
+        const maBody = emitNodes(ma.body, declared, ctx);
+        out += maBody;
+        break;
+      }
+
+      case 'web_service': {
+        const ws = node as IRWebService;
+        const wsBody = emitNodes(ws.body, declared, ctx);
+        out += wsBody;
+        break;
+      }
+
       default:
-        out += `// nodo no implementado\n`;
         break;
     }
   }
@@ -217,7 +260,7 @@ function emitRepeat(node: IRRepeat, declared: Set<string>, ctx: { loopCounter: n
 
   return (
     `for (int ${loopVar} = 0; ${loopVar} < ${timesCode}; ${loopVar}++) {\n` +
-    indent(body || '// (vacio)\n', 1) +
+    indent(body || '', 1) +
     `}\n`
   );
 }
@@ -228,7 +271,7 @@ function emitIf(node: IRIf, declared: Set<string>, ctx: { loopCounter: number })
 
   let result =
     `if (${condCode}) {\n` +
-    indent(body || '// (vacio)\n', 1) +
+    indent(body || '', 1) +
     `}\n`;
 
   if (node.elseBody && node.elseBody.length > 0) {
@@ -238,7 +281,7 @@ function emitIf(node: IRIf, declared: Set<string>, ctx: { loopCounter: number })
       result = result.trimEnd() + ` else ` + elseCode;
     } else {
       result = result.trimEnd() + ` else {\n` +
-        indent(elseCode || '// (vacio)\n', 1) +
+        indent(elseCode || '', 1) +
         `}\n`;
     }
   }
@@ -252,7 +295,7 @@ function emitWhile(node: IRWhile, declared: Set<string>, ctx: { loopCounter: num
 
   return (
     `while (${condCode}) {\n` +
-    indent(body || '// (vacio)\n', 1) +
+    indent(body || '', 1) +
     `}\n`
   );
 }
@@ -262,7 +305,7 @@ function emitFor(node: IRFor, declared: Set<string>, ctx: { loopCounter: number 
   const initCode = node.init ? emitNodes([node.init], forDeclared, ctx).trim().replace(/;$/, '') : '';
   const condCode = node.condition ? emitExpr(node.condition, forDeclared) : 'true';
   const incrCode = node.increment ? emitNodes([node.increment], forDeclared, ctx).trim().replace(/;$/, '') : '';
-  const bodyCode = emitNodes(node.body, forDeclared, ctx) || '// (vacio)\n';
+  const bodyCode = emitNodes(node.body, forDeclared, ctx) || '';
   return `for (${initCode}; ${condCode}; ${incrCode}) {\n${indent(bodyCode, 1)}}\n`;
 }
 
@@ -388,7 +431,7 @@ function emitInterfaceDefinition(node: IRInterfaceDefinition, declared: Set<stri
 
 function emitForever(node: IRForever, declared: Set<string>, ctx: { loopCounter: number }): string {
   const body = emitNodes(node.body, declared, ctx);
-  return `while (true) {\n${indent(body || '// (vacio)\n', 1)}}\n`;
+  return `while (true) {\n${indent(body || '', 1)}}\n`;
 }
 
 function emitWaitSeconds(node: IRWaitSeconds, declared: Set<string>, ctx: { loopCounter: number }): string {
@@ -404,7 +447,7 @@ function emitWaitUntil(node: IRWaitUntil, declared: Set<string>, ctx: { loopCoun
 function emitTryCatchFinally(node: IRTryCatchFinally, declared: Set<string>, ctx: { loopCounter: number }): string {
   const tryCode = emitNodes(node.tryBody, declared, ctx);
   const catchCode = emitNodes(node.catchBody, declared, ctx);
-  let result = `try {\n${indent(tryCode || '// (vacio)\n', 1)}} catch (${node.catchType} ${safeId(node.catchVar)}) {\n${indent(catchCode || '// (vacio)\n', 1)}}`;
+  let result = `try {\n${indent(tryCode, 1)}} catch (${node.catchType} ${safeId(node.catchVar)}) {\n${indent(catchCode, 1)}}`;
   if (node.finallyBody && node.finallyBody.length > 0) {
     const finallyCode = emitNodes(node.finallyBody, declared, ctx);
     result += ` finally {\n${indent(finallyCode, 1)}}`;
@@ -414,22 +457,22 @@ function emitTryCatchFinally(node: IRTryCatchFinally, declared: Set<string>, ctx
 
 function emitThrow(node: IRThrow, declared: Set<string>, ctx: { loopCounter: number }): string {
   const expr = emitExpr(node.expr, declared);
-  return `throw new ${expr};\n`;
+  return `throw ${expr};\n`;
 }
 
 function emitWhenReceive(node: IRWhenReceive, declared: Set<string>, ctx: { loopCounter: number }): string {
   const body = emitNodes(node.body, declared, ctx);
-  return `public static void ${safeId(node.message)}() {\n${indent(body || '// (vacio)\n', 1)}}\n`;
+  return `public static void ${safeId(node.message)}() {\n${indent(body, 1)}}\n`;
 }
 
 function emitListDeclaration(node: IRListDeclaration, declared: Set<string>, ctx: { loopCounter: number }): string {
   declared.add(node.name);
-  return `ArrayList<${node.elementType}> ${safeId(node.name)} = new ArrayList<>();\n`;
+  return `java.util.ArrayList<${node.elementType}> ${safeId(node.name)} = new java.util.ArrayList<>();\n`;
 }
 
 function emitMapDeclaration(node: IRMapDeclaration, declared: Set<string>, ctx: { loopCounter: number }): string {
   declared.add(node.name);
-  return `HashMap<${node.keyType}, ${node.valueType}> ${safeId(node.name)} = new HashMap<>();\n`;
+  return `java.util.HashMap<${node.keyType}, ${node.valueType}> ${safeId(node.name)} = new java.util.HashMap<>();\n`;
 }
 
 function emitEnumDefinition(node: IREnumDefinition, declared: Set<string>, ctx: { loopCounter: number }): string {
@@ -438,13 +481,13 @@ function emitEnumDefinition(node: IREnumDefinition, declared: Set<string>, ctx: 
 
 function emitThreadCreate(node: IRThreadCreate, declared: Set<string>, ctx: { loopCounter: number }): string {
   const body = emitNodes(node.body, declared, ctx);
-  return `Thread ${safeId(node.name)} = new Thread(() -> {\n${indent(body || '// (vacio)\n', 1)}});\n${safeId(node.name)}.start();\n`;
+  return `Thread ${safeId(node.name)} = new Thread(() -> {\n${indent(body, 1)}});\n${safeId(node.name)}.start();\n`;
 }
 
 function emitSynchronized(node: IRSynchronized, declared: Set<string>, ctx: { loopCounter: number }): string {
   const lock = emitExpr(node.lock, declared);
   const body = emitNodes(node.body, declared, ctx);
-  return `synchronized (${lock}) {\n${indent(body || '// (vacio)\n', 1)}}\n`;
+  return `synchronized (${lock}) {\n${indent(body, 1)}}\n`;
 }
 
 function emitVarAssign(node: IRVarAssign, declared: Set<string>, ctx: { loopCounter: number }): string {
@@ -453,7 +496,7 @@ function emitVarAssign(node: IRVarAssign, declared: Set<string>, ctx: { loopCoun
 
   if (!declared.has(name)) {
     declared.add(name);
-    return `double ${name} = ${valueCode};\n`;
+    return `var ${name} = ${valueCode};\n`;
   }
   return `${name} = ${valueCode};\n`;
 }
@@ -464,7 +507,7 @@ function emitVarChange(node: IRVarChange, declared: Set<string>, ctx: { loopCoun
 
   if (!declared.has(name)) {
     declared.add(name);
-    return `double ${name} = ${valueCode};\n`;
+    return `var ${name} = ${valueCode};\n`;
   }
   return `${name} += ${valueCode};\n`;
 }
@@ -579,7 +622,7 @@ function emitExpr(expr: IRExpr, declared: Set<string>): string {
 
     case 'stream_filter':
       const sf = expr as IRStreamFilter;
-      return `${safeId(sf.collection)}.stream().filter(${sf.variable} -> ${emitExpr(sf.condition, declared)}).collect(Collectors.toList())`;
+      return `${safeId(sf.collection)}.stream().filter(${sf.variable} -> ${emitExpr(sf.condition, declared)}).collect(java.util.stream.Collectors.toList())`;
 
     case 'function_call_expr':
       const fce = expr as IRFunctionCallExpr;
