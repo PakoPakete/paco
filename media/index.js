@@ -1185,6 +1185,9 @@ window.addEventListener('load', () => {
         .appendField('abstracta').appendField(new Blockly.FieldCheckbox('FALSE'), 'ABSTRACT');
       this.appendStatementInput('ATTRIBUTES').appendField('atributos');
       this.appendStatementInput('METHODS').appendField('métodos');
+      // Encadenable para poder poner una clase dentro de otra (clase interna).
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
       this.setColour(0);
     }
   };
@@ -1196,6 +1199,9 @@ window.addEventListener('load', () => {
         .appendField('abstracta').appendField(new Blockly.FieldCheckbox('FALSE'), 'ABSTRACT');
       this.appendStatementInput('ATTRIBUTES').appendField('atributos');
       this.appendStatementInput('METHODS').appendField('métodos');
+      // Encadenable para poder poner una clase dentro de otra (clase interna).
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
       this.setColour(0);
       this.setTooltip('Herencia de clases');
     }
@@ -1216,6 +1222,9 @@ window.addEventListener('load', () => {
         .appendField('abstracta').appendField(new Blockly.FieldCheckbox('FALSE'), 'ABSTRACT');
       this.appendStatementInput('ATTRIBUTES').appendField('atributos');
       this.appendStatementInput('METHODS').appendField('métodos');
+      // Encadenable para poder poner una clase dentro de otra (clase interna).
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
       this.setColour(0);
     }
   };

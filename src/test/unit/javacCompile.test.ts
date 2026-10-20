@@ -336,6 +336,41 @@ const programs: { name: string; xml: string }[] = [
             print(block('method_call_value', value('OBJECT', varGet('contador')) + field('METHOD', 'get') + args())),
         )),
     },
+
+    {
+        name: 'review fixes: switch endings, labels, local constants, throws and classes',
+        xml: xml(
+            block('void_function_definition', field('NAME', 'esperar') + statement('BODY',
+                block('constant_declaration', value('TYPE', typeBlock('int')) + field('NAME', 'K') + value('VALUE', num(1))),
+                block('thread_create', field('NAME', 'hilo') + statement('BODY', print(varGet('K')))),
+                block('thread_join', field('NAME', 'hilo')))),
+            block('void_function_definition', field('NAME', 'usarEsperar') + statement('BODY',
+                block('function_call', field('NAME', 'esperar') + args()),
+                block('class_definition', field('NAME', 'Local')))),
+            block('class_definition', field('NAME', 'Externa') + statement('METHODS', block('class_definition', field('NAME', 'Interna')))),
+            seq(
+                declareInit('int', 'n', num(5)),
+                block('constant_declaration', value('TYPE', typeBlock('int')) + field('NAME', 'DOBLE') +
+                    value('VALUE', block('math_arithmetic', field('OP', 'MULTIPLY') + value('A', varGet('n')) + value('B', num(2))))),
+                print(block('math_bitwise', field('OP', '^') + value('A', num(5)) + value('B', num(3)))),
+                block('controls_labeled', field('LABEL', 'fuera') + statement('DO',
+                    declareInit('int', 'x', num(0)),
+                    block('controls_whileUntil', field('MODE', 'WHILE') + value('BOOL', block('logic_boolean', field('BOOL', 'TRUE'))) +
+                        statement('DO', block('controls_switch', value('EXPR', varGet('x')) + statement('CASES',
+                            block('controls_case', value('CASE', num(0)) + statement('STATEMENT', block('controls_jump_label', field('JUMP', 'break') + field('LABEL', 'fuera')))),
+                            block('controls_case', value('CASE', num(1)) + statement('STATEMENT', block('controls_stop', field('MODE', 'THIS')))),
+                        )))))),
+                block('controls_labeled', field('LABEL', 'vacio')),
+                print(block('text_block', field('TEXT', 'Dijo "hola"'))),
+                block('function_call', field('NAME', 'usarEsperar') + args()),
+                declareInit('int', 'fin', varGet('DOBLE')),
+                block('variable_declaration_init', value('TYPE', customType('RuntimeException')) + field('VAR', 'error') +
+                    value('VALUE', block('object_instantiation', field('CLASS', 'IllegalStateException') + args(text('x'))))),
+                block('controls_if', value('IF0', block('logic_compare', field('OP', 'GT') + value('A', varGet('fin')) + value('B', num(100)))) +
+                    statement('DO0', block('throw_exception', value('EXCEPTION', varGet('error'))))),
+            ),
+        ),
+    },
 ];
 
 suite('Generated Java compiles with javac', function () {

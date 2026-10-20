@@ -1,6 +1,44 @@
 import { IRNode, IRExpr, IRRepeat, IRIf, IRWhile, IRFor, IRForever, IRSwitch, IRPrint, IRVarAssign, IRVarChange, IRVarRef, IRUnaryOp, IRString, IRRandom, IRComment, IRVarDeclaration, IRVarDeclarationInit, IRVarIncrement, IRVarDecrement, IRArrayDeclaration, IRArrayAccess, IRArrayAssignment, IRArrayLength, IRFunctionDefinition, IRFunctionCall, IRReturn, IRClassDefinition, IRInterfaceDefinition, IRTextConcat, IRTextLength, IRTextSubstring, IRInputRead, IRTryCatchFinally, IRThrow, IRWaitSeconds, IRWaitUntil, IRStop, IRListDeclaration, IRListAdd, IRListRemove, IRListClear, IRListInsert, IRListSet, IRMapDeclaration, IRMapPut, IRMapRemove, IRMapGet, IRMapContainsKey, IREnumDefinition, IRThreadCreate, IRSynchronized, IRImport, IRCodeTemplate, IRBroadcast, IRBroadcastWait, IRWhenReceive, IRTernary, IRCharAt, IRTextContains, IRListGet, IRListSize, IRListContains, IRNewObject, IRLambda, IRStreamFilter, IRFunctionCallExpr, IRFileWrite, IREncryptDecrypt, IRDesktopApp, IRMobileApp, IRWebService, IRDoWhile, IRForEach, IRCompoundAssign, IRMethodCall, IRMethodCallExpr, IRFieldAccess, IRFieldAssign, IRPrintf, IRSuperCall, IRConstantDeclaration, IRArray2DDeclaration, IRArray2DAssignment, IRArray2DAccess, IRCollectionDeclaration, IRCharLiteral, IRStaticCall, IRConstant, IRInstanceOf, IRExprStatement, IRLabeled, IRJumpLabel, IRAssert, IRSwitchArrow, IRSwitchExpr, IRRecordDefinition, IRLambdaBlock, IRMethodRef, IRTextBlock, IRAnonymousClass } from '../ir/nodes';
 
-type Ctx = { loopCounter: number; classLevel?: boolean };
+type Ctx = { loopCounter: number; classLevel?: boolean; throwingFunctions?: Set<string> };
+
+/** Context for the body of a method: its statements are local, not members of the class. */
+function bodyCtx(ctx: Ctx): Ctx {
+  return { ...ctx, classLevel: false };
+}
+
+// Calls emitted by blocks that throw checked exceptions (files, URLs, databases, threads...).
+const CHECKED_CALLS = /\b(Files\.(readAllBytes|writeString)|openConnection|DriverManager\.getConnection|Class\.forName|ProcessBuilder\(|Cipher\.getInstance|\.join\(\)|\.awaitTermination\()/;
+
+/**
+ * Names of the top-level functions whose body needs `throws Exception`: they use a block
+ * that throws a checked exception or call another such function.
+ */
+function findThrowingFunctions(nodes: IRNode[]): Set<string> {
+  const bodies = new Map<string, string>();
+  for (const n of nodes) {
+    if (n.kind === 'function_definition') {
+      const f = n as IRFunctionDefinition;
+      bodies.set(safeId(f.name), emitNodes(f.body, new Set(), { loopCounter: 0 }));
+    }
+  }
+  const throwing = new Set<string>();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [name, body] of bodies) {
+      if (throwing.has(name)) {
+        continue;
+      }
+      const callsThrowing = [...throwing].some(t => new RegExp(`\\b${t}\\(`).test(body));
+      if (CHECKED_CALLS.test(body) || callsThrowing) {
+        throwing.add(name);
+        changed = true;
+      }
+    }
+  }
+  return throwing;
+}
 
 let lambdaCounter = 0;
 
@@ -10,7 +48,8 @@ let lambdaCounter = 0;
  */
 export function irToJava(nodes: IRNode[], options: { classLevel?: boolean } = {}): string {
   const declared = new Set<string>();
-  const ctx: Ctx = { loopCounter: 0, classLevel: options.classLevel };
+  const throwingFunctions = options.classLevel ? findThrowingFunctions(nodes) : new Set<string>();
+  const ctx: Ctx = { loopCounter: 0, classLevel: options.classLevel, throwingFunctions };
   lambdaCounter = 0;
   const body = emitNodes(nodes, declared, ctx);
   if (body.includes('scanner.')) {
@@ -111,7 +150,8 @@ function emitNodes(nodes: IRNode[], declared: Set<string>, ctx: Ctx): string {
         break;
 
       case 'class_definition':
-        out += emitClassDefinition(node as IRClassDefinition, declared, ctx);
+        // Outside a method body the class is a member of PacoProgram; inside one it is a local class.
+        out += emitClassDefinition(node as IRClassDefinition, declared, ctx, ctx.classLevel !== false);
         break;
 
       case 'interface_definition':
@@ -320,7 +360,16 @@ function emitNodes(nodes: IRNode[], declared: Set<string>, ctx: Ctx): string {
 
       case 'labeled': {
         const lb = node as IRLabeled;
-        out += `${safeId(lb.label)}:\n${emitNodes(lb.body, declared, ctx)}`;
+        // Java labels a single statement: put the label on the first loop, or wrap everything in a block.
+        const loopKinds = ['for', 'while', 'repeat', 'forever', 'do_while', 'for_each'];
+        const loopAt = lb.body.findIndex(n => loopKinds.includes(n.kind));
+        if (loopAt < 0) {
+          out += `${safeId(lb.label)}: {\n${indent(emitNodes(lb.body, new Set(declared), ctx), 1)}}\n`;
+        } else {
+          out += emitNodes(lb.body.slice(0, loopAt), declared, ctx);
+          out += `${safeId(lb.label)}:\n`;
+          out += emitNodes(lb.body.slice(loopAt), declared, ctx);
+        }
         break;
       }
 
@@ -436,7 +485,7 @@ function emitSwitch(node: IRSwitch, declared: Set<string>, ctx: Ctx): string {
     const label = c.value ? `case ${emitExpr(c.value, declared)}:` : 'default:';
     const last = c.body.length > 0 ? c.body[c.body.length - 1].kind : '';
     // A trailing break after an explicit break/continue/return/throw is unreachable and javac rejects it.
-    const autoBreak = ['break', 'return', 'throw', 'continue'].includes(last) ? '' : 'break;\n';
+    const autoBreak = ['break', 'return', 'throw', 'continue', 'jump_label', 'stop'].includes(last) ? '' : 'break;\n';
     casesCode += `${label}\n${indent(emitNodes(c.body, declared, ctx) + autoBreak, 1)}`;
   }
   return `switch (${exprCode}) {\n${indent(casesCode, 1)}}\n`;
@@ -484,8 +533,9 @@ function emitArrayAssignment(node: IRArrayAssignment, declared: Set<string>, ctx
 
 function emitFunctionDefinition(node: IRFunctionDefinition, declared: Set<string>, ctx: Ctx): string {
   const paramsCode = node.params.map(p => `${p.type} ${safeId(p.name)}`).join(', ');
-  const bodyCode = emitNodes(node.body, new Set(declared), ctx);
-  return `public static ${node.returnType} ${safeId(node.name)}(${paramsCode}) {\n${indent(bodyCode, 1)}}\n`;
+  const bodyCode = emitNodes(node.body, new Set(declared), bodyCtx(ctx));
+  const throwsCode = ctx.throwingFunctions?.has(safeId(node.name)) ? ' throws Exception' : '';
+  return `public static ${node.returnType} ${safeId(node.name)}(${paramsCode})${throwsCode} {\n${indent(bodyCode, 1)}}\n`;
 }
 
 function emitFunctionCall(node: IRFunctionCall, declared: Set<string>, ctx: Ctx): string {
@@ -501,9 +551,10 @@ function emitReturn(node: IRReturn, declared: Set<string>, ctx: Ctx): string {
   return 'return;\n';
 }
 
-function emitClassDefinition(node: IRClassDefinition, declared: Set<string>, ctx: Ctx): string {
-  // Classes live inside PacoProgram, so they must be static to be created from main.
-  let header = `public static ${node.isAbstract ? 'abstract ' : ''}class ${node.name}`;
+function emitClassDefinition(node: IRClassDefinition, declared: Set<string>, ctx: Ctx, member: boolean = true): string {
+  // Member classes live inside PacoProgram (or another class), so they must be static to be created from main.
+  // Local classes, declared inside a method, cannot take modifiers.
+  let header = `${member ? 'public static ' : ''}${node.isAbstract ? 'abstract ' : ''}class ${node.name}`;
   if (node.extendsClass) {
     header += ` extends ${node.extendsClass}`;
   }
@@ -514,7 +565,7 @@ function emitClassDefinition(node: IRClassDefinition, declared: Set<string>, ctx
   // A generic class Caja<T> has a constructor called just Caja.
   const simpleName = node.name.replace(/<.*$/, '').trim();
   const methodCode = node.methods.map(m => emitClassMethod(m, simpleName, declared, ctx)).join('\n');
-  const innerCode = (node.innerClasses ?? []).map(c => '\n' + emitClassDefinition(c, declared, ctx)).join('');
+  const innerCode = (node.innerClasses ?? []).map(c => '\n' + emitClassDefinition(c, declared, ctx, true)).join('');
   return `${header} {\n${indent(attrCode + methodCode + innerCode, 1)}}\n`;
 }
 
@@ -537,7 +588,7 @@ function emitClassMethod(node: IRFunctionDefinition, className: string, declared
 
   if (node.name === '__constructor__') {
     const paramsCode = node.params.map(p => `${p.type} ${safeId(p.name)}`).join(', ');
-    const bodyCode = emitNodes(node.body, new Set(declared), ctx);
+    const bodyCode = emitNodes(node.body, new Set(declared), bodyCtx(ctx));
     return `${override}${mod} ${className}(${paramsCode}) {\n${indent(bodyCode, 1)}}\n`;
   }
 
@@ -546,7 +597,7 @@ function emitClassMethod(node: IRFunctionDefinition, className: string, declared
   if (node.isAbstract) {
     return `${mod} abstract ${node.returnType} ${safeId(node.name)}(${paramsCode})${throwsCode};\n`;
   }
-  const bodyCode = emitNodes(node.body, new Set(declared), ctx);
+  const bodyCode = emitNodes(node.body, new Set(declared), bodyCtx(ctx));
   return `${override}${mod} ${staticMod}${node.returnType} ${safeId(node.name)}(${paramsCode})${throwsCode} {\n${indent(bodyCode, 1)}}\n`;
 }
 
@@ -594,7 +645,7 @@ function emitThrow(node: IRThrow, declared: Set<string>, ctx: Ctx): string {
 }
 
 function emitWhenReceive(node: IRWhenReceive, declared: Set<string>, ctx: Ctx): string {
-  const body = emitNodes(node.body, declared, ctx);
+  const body = emitNodes(node.body, declared, bodyCtx(ctx));
   return `public static void ${safeId(node.message)}() {\n${indent(body, 1)}}\n`;
 }
 
@@ -665,6 +716,9 @@ function emitExpr(expr: IRExpr, declared: Set<string>): string {
       return `((int) (Math.random() * ((${emitExpr(rand.max, declared)}) - (${emitExpr(rand.min, declared)}) + 1)) + (${emitExpr(rand.min, declared)}))`;
 
     case 'binary_op':
+      if (expr.op === 'xor') {
+        return `(${emitExpr(expr.left, declared)} ^ ${emitExpr(expr.right, declared)})`;
+      }
       if (expr.op === '^') {
         return `Math.pow(${emitExpr(expr.left, declared)}, ${emitExpr(expr.right, declared)})`;
       }
@@ -943,7 +997,7 @@ function safeId(name: string): string {
 /** Java 15 text block. Lines come from the "\n" the student typed. */
 function emitTextBlock(tb: IRTextBlock): string {
   const q = '"'.repeat(3);
-  // Inside a text block single quotes need no escaping, but three in a row would close it.
-  const body = tb.lines.map(l => escapeJava(l, '\u0000').split(q).join('\\' + q)).join('\n');
+  // Escaping every quote keeps a line ending in " from merging with the closing delimiter.
+  const body = tb.lines.map(l => escapeJava(l, '"')).join('\n');
   return `${q}\n${body}${q}`;
 }

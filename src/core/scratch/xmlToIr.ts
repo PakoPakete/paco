@@ -1065,8 +1065,8 @@ function parseTryCatchFinally(block: Element): IRTryCatchFinally {
 function parseThrow(block: Element): IRThrow {
   const val = findValue(block, 'EXCEPTION') || firstValue(block);
   let expr: IRExpr = val ? parseExprFromValue(val) : { kind: 'new_object', className: 'RuntimeException', args: [] } as IRNewObject;
-  // `throw "mensaje"` is not Java: wrap anything that is not an object in a RuntimeException.
-  if (expr.kind !== 'new_object' && expr.kind !== 'var_ref' && expr.kind !== 'method_call_expr' && expr.kind !== 'field_access') {
+  // `throw "mensaje"` is not Java: a text becomes the message of a RuntimeException.
+  if (expr.kind === 'string' || expr.kind === 'text_concat') {
     expr = { kind: 'new_object', className: 'RuntimeException', args: [expr] } as IRNewObject;
   }
   return { kind: 'throw', expr };
@@ -1925,7 +1925,8 @@ function parseExtraExpr(block: Element, type: string | null): IRExpr | null {
     }
 
     case 'math_bitwise':
-      return { kind: 'binary_op', op: choice(block, 'OP', BITWISE_OPS), left: valueOr(block, 'A', numberLiteral(0)), right: valueOr(block, 'B', numberLiteral(0)) };
+      // '^' already means power (Math.pow) in the IR, so XOR gets its own name.
+      return { kind: 'binary_op', op: bitwiseOp(choice(block, 'OP', BITWISE_OPS)), left: valueOr(block, 'A', numberLiteral(0)), right: valueOr(block, 'B', numberLiteral(0)) };
 
     case 'math_bitwise_not':
       return { kind: 'unary_op', op: '~', expr: valueOr(block, 'NUM', numberLiteral(0)) };
@@ -2047,4 +2048,8 @@ function parseValueCases(block: Element): { value?: IRExpr; result: IRExpr }[] {
     }
   }
   return cases;
+}
+
+function bitwiseOp(op: string): string {
+  return op === '^' ? 'xor' : op;
 }

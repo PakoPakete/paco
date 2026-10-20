@@ -179,9 +179,9 @@ suite('Modern Java blocks', () => {
         assert.ok(java.includes('public Caja() {'));
     });
 
-    test('text block keeps quotes and splits lines on \\n', () => {
+    test('text block escapes quotes and splits lines on \\n', () => {
         assert.strictEqual(toJava(print(block('text_block', field('TEXT', 'a "b"\\nc')))),
-            'System.out.println("""\na "b"\nc""");\n');
+            'System.out.println("""\na \\"b\\"\nc""");\n');
     });
 
     test('stream sum unboxes the numbers', () => {
@@ -194,5 +194,35 @@ suite('Modern Java blocks', () => {
         assert.strictEqual(toJava(block('controls_jump_label', field('JUMP', 'continue') + field('LABEL', 'fila'))), 'continue fila;\n');
         assert.strictEqual(toJava(print(block('logic_instanceof_pattern', value('VALUE', varGet('o')) + field('CLASS', 'String') + field('VAR', 's')))),
             'System.out.println((o instanceof String s));\n');
+    });
+});
+
+suite('Review fixes', () => {
+    test('bitwise ^ is XOR, not Math.pow', () => {
+        assert.strictEqual(toJava(print(block('math_bitwise', field('OP', '^') + value('A', num(5)) + value('B', num(3))))),
+            'System.out.println((5 ^ 3));\n');
+    });
+
+    test('throw keeps an exception variable as it is', () => {
+        assert.strictEqual(toJava(block('throw_exception', value('EXCEPTION', varGet('e')))), 'throw e;\n');
+    });
+
+    test('a constant that reads a local of main stays in main', () => {
+        const java = lines(xmlToJavaProgram(xml(seq(
+            declareInit('int', 'n', num(5)),
+            block('constant_declaration', value('TYPE', typeBlock('int')) + field('NAME', 'M') + value('VALUE', varGet('n')))))));
+        assert.ok(java.includes('final int M = n;'));
+        assert.ok(!java.includes('static final int M = n;'));
+    });
+
+    test('a function that joins a thread declares throws Exception, and so do its callers', () => {
+        const java = xmlToJavaProgram(xml(
+            block('void_function_definition', field('NAME', 'a') + statement('BODY', block('thread_join', field('NAME', 'h')))),
+            block('void_function_definition', field('NAME', 'b') + statement('BODY', block('function_call', field('NAME', 'a') + args()))),
+            block('void_function_definition', field('NAME', 'c') + statement('BODY', print(num(1)))),
+        ));
+        assert.ok(java.includes('public static void a() throws Exception {'));
+        assert.ok(java.includes('public static void b() throws Exception {'));
+        assert.ok(java.includes('public static void c() {'));
     });
 });
