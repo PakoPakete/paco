@@ -45,15 +45,27 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'controls_forever' },
           { kind: 'block', type: 'controls_if' },
           { kind: 'block', type: 'controls_whileUntil' },
+          { kind: 'block', type: 'controls_do_while' },
           { kind: 'block', type: 'controls_wait_until' },
           { kind: 'block', type: 'controls_for' },
+          { kind: 'block', type: 'controls_for_classic' },
+          { kind: 'block', type: 'controls_for_each' },
           { kind: 'block', type: 'controls_for_infinite' },
           { kind: 'block', type: 'controls_switch' },
           { kind: 'block', type: 'controls_case' },
           { kind: 'block', type: 'controls_default' },
+          { kind: 'block', type: 'switch_arrow' },
+          { kind: 'block', type: 'case_arrow' },
+          { kind: 'block', type: 'default_arrow' },
+          { kind: 'block', type: 'switch_expression' },
+          { kind: 'block', type: 'case_value' },
+          { kind: 'block', type: 'default_value' },
           { kind: 'block', type: 'controls_stop' },
           { kind: 'block', type: 'controls_break' },
           { kind: 'block', type: 'controls_continue' },
+          { kind: 'block', type: 'controls_labeled' },
+          { kind: 'block', type: 'controls_jump_label' },
+          { kind: 'block', type: 'assert_block' },
           { kind: 'block', type: 'controls_return' },
           { kind: 'block', type: 'ternary_operator' },
         ]
@@ -68,6 +80,8 @@ window.addEventListener('load', () => {
         contents: [
           { kind: 'block', type: 'try_catch_finally' },
           { kind: 'block', type: 'throw_exception' },
+          { kind: 'block', type: 'try_multi_catch' },
+          { kind: 'block', type: 'catch_clause' },
         ]
       },
 
@@ -83,6 +97,12 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'math_random_int' },
           { kind: 'block', type: 'math_modulo' },
           { kind: 'block', type: 'math_round' },
+          { kind: 'block', type: 'math_function' },
+          { kind: 'block', type: 'math_two_args' },
+          { kind: 'block', type: 'math_constant_java' },
+          { kind: 'block', type: 'math_cast' },
+          { kind: 'block', type: 'math_bitwise' },
+          { kind: 'block', type: 'math_bitwise_not' },
         ]
       },
 
@@ -107,6 +127,9 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'logic_boolean' },
           { kind: 'block', type: 'logic_operation' },
           { kind: 'block', type: 'logic_negate' },
+          { kind: 'block', type: 'logic_null' },
+          { kind: 'block', type: 'logic_instanceof' },
+          { kind: 'block', type: 'logic_instanceof_pattern' },
         ]
       },
 
@@ -118,7 +141,11 @@ window.addEventListener('load', () => {
         colour: '#9370DB',
         contents: [
           { kind: 'block', type: 'text' },
+          { kind: 'block', type: 'char_literal' },
+          { kind: 'block', type: 'text_block' },
           { kind: 'block', type: 'text_print' },
+          { kind: 'block', type: 'text_print_inline' },
+          { kind: 'block', type: 'text_printf' },
           { kind: 'block', type: 'text_concat' },
           { kind: 'block', type: 'text_char_at' },
           { kind: 'block', type: 'text_length' },
@@ -127,6 +154,10 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'text_equals' },
           { kind: 'block', type: 'text_to_int' },
           { kind: 'block', type: 'int_to_text' },
+          { kind: 'block', type: 'text_method' },
+          { kind: 'block', type: 'text_method_arg' },
+          { kind: 'block', type: 'text_replace' },
+          { kind: 'block', type: 'text_convert' },
         ]
       },
 
@@ -139,8 +170,10 @@ window.addEventListener('load', () => {
         contents: [
           { kind: 'block', type: 'variable_declaration' },
           { kind: 'block', type: 'variable_declaration_init' },
+          { kind: 'block', type: 'constant_declaration' },
           { kind: 'block', type: 'variable_assignment' },
           { kind: 'block', type: 'variable_change_by' },
+          { kind: 'block', type: 'variable_compound' },
           { kind: 'block', type: 'variable_increment' },
           { kind: 'block', type: 'variable_decrement' },
           { kind: 'block', type: 'variables_get' },
@@ -160,6 +193,12 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'type_char' },
           { kind: 'block', type: 'type_boolean' },
           { kind: 'block', type: 'type_string' },
+          { kind: 'block', type: 'type_long' },
+          { kind: 'block', type: 'type_float' },
+          { kind: 'block', type: 'type_short' },
+          { kind: 'block', type: 'type_byte' },
+          { kind: 'block', type: 'type_custom' },
+          { kind: 'block', type: 'type_var' },
           { kind: 'block', type: 'type_void' },
           { kind: 'block', type: 'enum_definition' },
         ]
@@ -177,6 +216,11 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'array_access' },
           { kind: 'block', type: 'array_assignment' },
           { kind: 'block', type: 'array_length' },
+          { kind: 'block', type: 'array2d_declaration' },
+          { kind: 'block', type: 'array2d_access' },
+          { kind: 'block', type: 'array2d_assignment' },
+          { kind: 'block', type: 'collections_util' },
+          { kind: 'block', type: 'util_value' },
         ]
       },
 
@@ -201,6 +245,12 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'map_get' },
           { kind: 'block', type: 'map_remove' },
           { kind: 'block', type: 'map_contains_key' },
+          { kind: 'block', type: 'map_get_or_default' },
+          { kind: 'block', type: 'collection_declaration' },
+          { kind: 'block', type: 'collection_do' },
+          { kind: 'block', type: 'collection_do_no_arg' },
+          { kind: 'block', type: 'collection_value' },
+          { kind: 'block', type: 'collection_value_arg' },
         ]
       },
 
@@ -215,6 +265,7 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'void_function_definition' },
           { kind: 'block', type: 'function_parameter' },
           { kind: 'block', type: 'function_call' },
+          { kind: 'block', type: 'function_call_value' },
           { kind: 'block', type: 'function_return_value' },
         ]
       },
@@ -234,8 +285,17 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'constructor_definition' },
           { kind: 'block', type: 'method_definition' },
           { kind: 'block', type: 'method_override' },
+          { kind: 'block', type: 'abstract_method' },
+          { kind: 'block', type: 'record_definition' },
+          { kind: 'block', type: 'anonymous_class' },
           { kind: 'block', type: 'object_instantiation' },
           { kind: 'block', type: 'this_reference' },
+          { kind: 'block', type: 'method_call' },
+          { kind: 'block', type: 'method_call_value' },
+          { kind: 'block', type: 'field_get' },
+          { kind: 'block', type: 'field_set' },
+          { kind: 'block', type: 'super_reference' },
+          { kind: 'block', type: 'super_constructor_call' },
         ]
       },
 
@@ -248,6 +308,14 @@ window.addEventListener('load', () => {
         contents: [
           { kind: 'block', type: 'lambda_function' },
           { kind: 'block', type: 'stream_filter' },
+          { kind: 'block', type: 'lambda_block' },
+          { kind: 'block', type: 'method_reference' },
+          { kind: 'block', type: 'stream_start' },
+          { kind: 'block', type: 'stream_op' },
+          { kind: 'block', type: 'stream_terminal' },
+          { kind: 'block', type: 'stream_for_each' },
+          { kind: 'block', type: 'optional_create' },
+          { kind: 'block', type: 'optional_value' },
           { kind: 'block', type: 'generic_function' },
         ]
       },
@@ -262,6 +330,11 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'thread_create' },
           { kind: 'block', type: 'synchronized_block' },
           { kind: 'block', type: 'parallel_exec' },
+          { kind: 'block', type: 'thread_join' },
+          { kind: 'block', type: 'executor_create' },
+          { kind: 'block', type: 'executor_submit' },
+          { kind: 'block', type: 'executor_shutdown' },
+          { kind: 'block', type: 'atomic_declaration' },
         ]
       },
 
@@ -275,6 +348,9 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'input_read_int' },
           { kind: 'block', type: 'input_read_string' },
           { kind: 'block', type: 'input_read_double' },
+          { kind: 'block', type: 'input_read_boolean' },
+          { kind: 'block', type: 'input_read_word' },
+          { kind: 'block', type: 'input_has_next_int' },
           { kind: 'block', type: 'file_read' },
           { kind: 'block', type: 'file_write' },
           { kind: 'block', type: 'url_connection' },
@@ -292,6 +368,8 @@ window.addEventListener('load', () => {
         contents: [
           { kind: 'block', type: 'system_timer' },
           { kind: 'block', type: 'system_reset_timer' },
+          { kind: 'block', type: 'date_now' },
+          { kind: 'block', type: 'date_of' },
         ]
       },
 
@@ -338,6 +416,51 @@ window.addEventListener('load', () => {
 
 
   // DEFINICIONES DE BLOQUES PERSONALIZADOS
+
+  // Tipos que ofrecen los desplegables de métodos.
+  const RETURN_TYPES = [['void','void'],['int','int'],['double','double'],['String','String'],['boolean','boolean'],['char','char'],['long','long'],['float','float'],['Object','Object']];
+
+  // Bloques con número variable de argumentos: entradas ARG0..ARGn-1.
+  // El número se guarda en <mutation args="n"> para que el XML recuerde las entradas.
+  function argsDropdown() {
+    return new Blockly.FieldDropdown(
+      [['0','0'],['1','1'],['2','2'],['3','3'],['4','4'],['5','5']],
+      function(value) {
+        const block = this.getSourceBlock();
+        if (block) {
+          block.updateArgs_(parseInt(value, 10) || 0);
+        }
+        return value;
+      }
+    );
+  }
+
+  function withArgs(definition) {
+    return Object.assign({
+      argCount_: 0,
+      updateArgs_: function(count) {
+        for (let i = this.argCount_; i < count; i++) {
+          if (!this.getInput('ARG' + i)) {
+            this.appendValueInput('ARG' + i).appendField(i === 0 ? '(' : ',');
+          }
+        }
+        for (let i = count; i < this.argCount_; i++) {
+          if (this.getInput('ARG' + i)) {
+            this.removeInput('ARG' + i);
+          }
+        }
+        this.argCount_ = count;
+      },
+      mutationToDom: function() {
+        const mutation = Blockly.utils.xml.createElement('mutation');
+        mutation.setAttribute('args', String(this.argCount_));
+        return mutation;
+      },
+      domToMutation: function(xmlElement) {
+        this.updateArgs_(parseInt(xmlElement.getAttribute('args'), 10) || 0);
+      }
+    }, definition);
+  }
 
 
 
@@ -1023,15 +1146,26 @@ window.addEventListener('load', () => {
     }
   };
 
-  Blockly.Blocks['function_call'] = {
+  Blockly.Blocks['function_call'] = withArgs({
     init: function() {
-      this.appendDummyInput().appendField('llamar').appendField(new Blockly.FieldTextInput('miFuncion'), 'NAME');
-      this.appendValueInput('ARGS').appendField('con');
+      this.appendDummyInput().appendField('llamar').appendField(new Blockly.FieldTextInput('miFuncion'), 'NAME')
+        .appendField('argumentos').appendField(argsDropdown(), 'NARGS');
       this.setPreviousStatement(true);
       this.setNextStatement(true);
       this.setColour(290);
+      this.setTooltip('miFuncion(a, b, ...);');
     }
-  };
+  });
+
+  Blockly.Blocks['function_call_value'] = withArgs({
+    init: function() {
+      this.appendDummyInput().appendField('valor de').appendField(new Blockly.FieldTextInput('miFuncion'), 'NAME')
+        .appendField('argumentos').appendField(argsDropdown(), 'NARGS');
+      this.setOutput(true);
+      this.setColour(290);
+      this.setTooltip('Usa lo que devuelve la función: int r = miFuncion(a, b);');
+    }
+  });
 
   Blockly.Blocks['function_return_value'] = {
     init: function() {
@@ -1047,9 +1181,13 @@ window.addEventListener('load', () => {
 
   Blockly.Blocks['class_definition'] = {
     init: function() {
-      this.appendDummyInput().appendField('clase').appendField(new Blockly.FieldTextInput('MiClase'), 'NAME');
+      this.appendDummyInput().appendField('clase').appendField(new Blockly.FieldTextInput('MiClase'), 'NAME')
+        .appendField('abstracta').appendField(new Blockly.FieldCheckbox('FALSE'), 'ABSTRACT');
       this.appendStatementInput('ATTRIBUTES').appendField('atributos');
       this.appendStatementInput('METHODS').appendField('métodos');
+      // Encadenable para poder poner una clase dentro de otra (clase interna).
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
       this.setColour(0);
     }
   };
@@ -1057,9 +1195,13 @@ window.addEventListener('load', () => {
   Blockly.Blocks['class_extends'] = {
     init: function() {
       this.appendDummyInput().appendField('clase').appendField(new Blockly.FieldTextInput('Hijo'), 'NAME')
-        .appendField('extiende').appendField(new Blockly.FieldTextInput('Padre'), 'PARENT');
+        .appendField('extiende').appendField(new Blockly.FieldTextInput('Padre'), 'PARENT')
+        .appendField('abstracta').appendField(new Blockly.FieldCheckbox('FALSE'), 'ABSTRACT');
       this.appendStatementInput('ATTRIBUTES').appendField('atributos');
       this.appendStatementInput('METHODS').appendField('métodos');
+      // Encadenable para poder poner una clase dentro de otra (clase interna).
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
       this.setColour(0);
       this.setTooltip('Herencia de clases');
     }
@@ -1076,9 +1218,13 @@ window.addEventListener('load', () => {
   Blockly.Blocks['class_implements'] = {
     init: function() {
       this.appendDummyInput().appendField('clase').appendField(new Blockly.FieldTextInput('MiClase'), 'NAME')
-        .appendField('implementa').appendField(new Blockly.FieldTextInput('MiInterfaz'), 'INTERFACE');
+        .appendField('implementa').appendField(new Blockly.FieldTextInput('MiInterfaz'), 'INTERFACE')
+        .appendField('abstracta').appendField(new Blockly.FieldCheckbox('FALSE'), 'ABSTRACT');
       this.appendStatementInput('ATTRIBUTES').appendField('atributos');
       this.appendStatementInput('METHODS').appendField('métodos');
+      // Encadenable para poder poner una clase dentro de otra (clase interna).
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
       this.setColour(0);
     }
   };
@@ -1087,8 +1233,12 @@ window.addEventListener('load', () => {
     init: function() {
       this.appendDummyInput().appendField(
         new Blockly.FieldDropdown([['public','public'],['private','private'],['protected','protected']]), 'MODIFIER'
-      ).appendField(new Blockly.FieldDropdown([['int','int'],['double','double'],['String','String'],['boolean','boolean'],['char','char']]), 'TYPE')
+      ).appendField('static').appendField(new Blockly.FieldCheckbox('FALSE'), 'STATIC')
+        .appendField('final').appendField(new Blockly.FieldCheckbox('FALSE'), 'FINAL')
+        .appendField(new Blockly.FieldDropdown([['int','int'],['double','double'],['String','String'],['boolean','boolean'],['char','char'],['long','long'],['float','float']]), 'TYPE')
         .appendField(new Blockly.FieldTextInput('nombre'), 'NAME');
+      this.appendValueInput('VALUE').appendField('= (opcional)');
+      this.setTooltip('Atributo. Para una constante marca static y final y dale un valor. Para otros tipos usa "declarar" con un bloque "tipo".');
       this.setPreviousStatement(true);
       this.setNextStatement(true);
       this.setColour(0);
@@ -1110,8 +1260,10 @@ window.addEventListener('load', () => {
     init: function() {
       this.appendDummyInput().appendField(
         new Blockly.FieldDropdown([['public','public'],['private','private'],['protected','protected']]), 'MODIFIER'
-      ).appendField(new Blockly.FieldDropdown([['void','void'],['int','int'],['double','double'],['String','String'],['boolean','boolean']]), 'RETURN_TYPE')
-        .appendField('método').appendField(new Blockly.FieldTextInput('miMetodo'), 'NAME');
+      ).appendField(new Blockly.FieldDropdown(RETURN_TYPES), 'RETURN_TYPE')
+        .appendField('método').appendField(new Blockly.FieldTextInput('miMetodo'), 'NAME')
+        .appendField('static').appendField(new Blockly.FieldCheckbox('FALSE'), 'STATIC');
+      this.appendDummyInput().appendField('throws (opcional)').appendField(new Blockly.FieldTextInput(''), 'THROWS');
       this.appendStatementInput('PARAMS').appendField('parámetros');
       this.appendStatementInput('BODY').appendField('hacer');
       this.setPreviousStatement(true);
@@ -1125,8 +1277,9 @@ window.addEventListener('load', () => {
       this.appendDummyInput().appendField('@Override');
       this.appendDummyInput().appendField(
         new Blockly.FieldDropdown([['public','public'],['protected','protected']]), 'MODIFIER'
-      ).appendField(new Blockly.FieldDropdown([['void','void'],['int','int'],['double','double'],['String','String'],['boolean','boolean']]), 'RETURN_TYPE')
+      ).appendField(new Blockly.FieldDropdown(RETURN_TYPES), 'RETURN_TYPE')
         .appendField(new Blockly.FieldTextInput('metodo'), 'NAME');
+      this.appendStatementInput('PARAMS').appendField('parámetros');
       this.appendStatementInput('BODY').appendField('hacer');
       this.setPreviousStatement(true);
       this.setNextStatement(true);
@@ -1135,15 +1288,15 @@ window.addEventListener('load', () => {
     }
   };
 
-  Blockly.Blocks['object_instantiation'] = {
+  Blockly.Blocks['object_instantiation'] = withArgs({
     init: function() {
-      this.appendDummyInput().appendField('new').appendField(new Blockly.FieldTextInput('MiClase'), 'CLASS');
-      this.appendValueInput('ARGS').appendField('(');
-      this.appendDummyInput().appendField(')');
+      this.appendDummyInput().appendField('new').appendField(new Blockly.FieldTextInput('MiClase'), 'CLASS')
+        .appendField('argumentos').appendField(argsDropdown(), 'NARGS');
       this.setOutput(true);
       this.setColour(0);
+      this.setTooltip('new MiClase(a, b, ...)');
     }
-  };
+  });
 
   Blockly.Blocks['this_reference'] = {
     init: function() {
@@ -1431,6 +1584,839 @@ window.addEventListener('load', () => {
       this.setTooltip('ProcessBuilder / Runtime.exec');
     }
   };
+
+  //  BLOQUES NUEVOS (0.5): BUCLES, OBJETOS, TEXTO, MATEMÁTICAS Y COLECCIONES
+
+
+  Blockly.Blocks['controls_do_while'] = {
+    init: function() {
+      this.appendStatementInput('DO').appendField('hacer');
+      this.appendValueInput('BOOL').setCheck('Boolean').appendField('mientras');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(120);
+      this.setTooltip('do { ... } while (condición);');
+    }
+  };
+
+  Blockly.Blocks['controls_for_each'] = {
+    init: function() {
+      this.appendDummyInput().appendField('para cada')
+        .appendField(new Blockly.FieldTextInput('int'), 'TYPE')
+        .appendField(new Blockly.FieldTextInput('x'), 'VAR');
+      this.appendValueInput('COLLECTION').appendField('en');
+      this.appendStatementInput('DO').appendField('hacer');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(120);
+      this.setTooltip('for (Tipo x : coleccion) { ... } Sirve para arrays, listas y conjuntos.');
+    }
+  };
+
+  Blockly.Blocks['controls_for_classic'] = {
+    init: function() {
+      this.appendDummyInput().appendField('for int').appendField(new Blockly.FieldTextInput('i'), 'VAR').appendField('=');
+      this.appendValueInput('FROM').setCheck('Number');
+      this.appendDummyInput().appendField('mientras').appendField(
+        new Blockly.FieldDropdown([['<','LT'],['<=','LTE'],['>','GT'],['>=','GTE']]), 'OP');
+      this.appendValueInput('TO').setCheck('Number');
+      this.appendDummyInput().appendField('paso').appendField(
+        new Blockly.FieldDropdown([['++','++'],['--','--'],['+=','+='],['-=','-=']]), 'STEP');
+      this.appendValueInput('BY').setCheck('Number').appendField('(para += / -=)');
+      this.appendStatementInput('DO').appendField('hacer');
+      this.setInputsInline(true);
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(120);
+      this.setTooltip('for (int i = desde; i < hasta; i++) { ... }');
+    }
+  };
+
+  Blockly.Blocks['variable_compound'] = {
+    init: function() {
+      this.appendDummyInput().appendField(new Blockly.FieldTextInput('variable'), 'VAR')
+        .appendField(new Blockly.FieldDropdown([['+=','+='],['-=','-='],['*=','*='],['/=','/='],['%=','%=']]), 'OP');
+      this.appendValueInput('VALUE');
+      this.setInputsInline(true);
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(330);
+      this.setTooltip('x -= 2;  x *= 3;  ...');
+    }
+  };
+
+  Blockly.Blocks['text_print_inline'] = {
+    init: function() {
+      this.appendValueInput('TEXT').appendField('imprimir sin salto de línea');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(160);
+      this.setTooltip('System.out.print(x)');
+    }
+  };
+
+  Blockly.Blocks['text_printf'] = withArgs({
+    init: function() {
+      this.appendDummyInput().appendField('printf').appendField(new Blockly.FieldTextInput('Total: %.2f%n'), 'FORMAT')
+        .appendField('valores').appendField(argsDropdown(), 'NARGS');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(160);
+      this.setTooltip('System.out.printf("formato", valores...). %d entero, %.2f decimal, %s texto, %n salto de línea');
+    }
+  });
+
+  Blockly.Blocks['char_literal'] = {
+    init: function() {
+      this.appendDummyInput().appendField("'").appendField(new Blockly.FieldTextInput('a'), 'CHAR').appendField("'");
+      this.setOutput(true);
+      this.setColour(160);
+      this.setTooltip("Un carácter (char): 'a'");
+    }
+  };
+
+  Blockly.Blocks['text_method'] = {
+    init: function() {
+      this.appendValueInput('TEXT');
+      this.appendDummyInput().appendField('.').appendField(new Blockly.FieldDropdown([
+        ['toUpperCase()','toUpperCase'],['toLowerCase()','toLowerCase'],['trim()','trim'],
+        ['strip()','strip'],['isEmpty()','isEmpty'],['isBlank()','isBlank']]), 'METHOD');
+      this.setInputsInline(true);
+      this.setOutput(true);
+      this.setColour(160);
+    }
+  };
+
+  Blockly.Blocks['text_method_arg'] = {
+    init: function() {
+      this.appendValueInput('TEXT');
+      this.appendDummyInput().appendField('.').appendField(new Blockly.FieldDropdown([
+        ['indexOf','indexOf'],['lastIndexOf','lastIndexOf'],['startsWith','startsWith'],['endsWith','endsWith'],
+        ['equalsIgnoreCase','equalsIgnoreCase'],['compareTo','compareTo'],['split','split'],['repeat','repeat']]), 'METHOD');
+      this.appendValueInput('ARG').appendField('(');
+      this.appendDummyInput().appendField(')');
+      this.setInputsInline(true);
+      this.setOutput(true);
+      this.setColour(160);
+    }
+  };
+
+  Blockly.Blocks['text_replace'] = {
+    init: function() {
+      this.appendValueInput('TEXT').appendField('en');
+      this.appendValueInput('FROM').appendField('reemplazar');
+      this.appendValueInput('TO').appendField('por');
+      this.setInputsInline(true);
+      this.setOutput(true, 'String');
+      this.setColour(160);
+      this.setTooltip('texto.replace(viejo, nuevo)');
+    }
+  };
+
+  Blockly.Blocks['text_convert'] = {
+    init: function() {
+      this.appendValueInput('VALUE').appendField(new Blockly.FieldDropdown([
+        ['Double.parseDouble','Double.parseDouble'],['Long.parseLong','Long.parseLong'],['Boolean.parseBoolean','Boolean.parseBoolean'],
+        ['String.valueOf','String.valueOf'],['Integer.toString','Integer.toString'],
+        ['Character.isDigit','Character.isDigit'],['Character.isLetter','Character.isLetter'],
+        ['Character.isUpperCase','Character.isUpperCase'],['Character.isLowerCase','Character.isLowerCase'],
+        ['Character.toUpperCase','Character.toUpperCase'],['Character.toLowerCase','Character.toLowerCase'],
+        ['Character.getNumericValue','Character.getNumericValue']]), 'FUNC');
+      this.setOutput(true);
+      this.setColour(160);
+    }
+  };
+
+  Blockly.Blocks['math_cast'] = {
+    init: function() {
+      this.appendValueInput('VALUE').appendField('convertir a').appendField(new Blockly.FieldDropdown([
+        ['(int)','int'],['(double)','double'],['(long)','long'],['(float)','float'],['(char)','char'],['(short)','short'],['(byte)','byte']]), 'TYPE');
+      this.setOutput(true);
+      this.setColour(230);
+      this.setTooltip('Casting: (int) 3.7 da 3; (double) a / b hace división decimal');
+    }
+  };
+
+  Blockly.Blocks['math_function'] = {
+    init: function() {
+      this.appendValueInput('NUM').setCheck('Number').appendField(new Blockly.FieldDropdown([
+        ['Math.abs','Math.abs'],['Math.sqrt','Math.sqrt'],['Math.cbrt','Math.cbrt'],['Math.floor','Math.floor'],
+        ['Math.ceil','Math.ceil'],['Math.log','Math.log'],['Math.log10','Math.log10'],
+        ['Math.sin','Math.sin'],['Math.cos','Math.cos'],['Math.tan','Math.tan']]), 'FUNC');
+      this.setOutput(true, 'Number');
+      this.setColour(230);
+    }
+  };
+
+  Blockly.Blocks['math_two_args'] = {
+    init: function() {
+      this.appendValueInput('A').setCheck('Number').appendField(new Blockly.FieldDropdown([
+        ['Math.max','Math.max'],['Math.min','Math.min'],['Math.pow','Math.pow'],['Math.hypot','Math.hypot']]), 'FUNC').appendField('(');
+      this.appendValueInput('B').setCheck('Number').appendField(',');
+      this.appendDummyInput().appendField(')');
+      this.setInputsInline(true);
+      this.setOutput(true, 'Number');
+      this.setColour(230);
+    }
+  };
+
+  Blockly.Blocks['math_constant_java'] = {
+    init: function() {
+      this.appendDummyInput().appendField(new Blockly.FieldDropdown([
+        ['Math.PI','Math.PI'],['Math.E','Math.E'],['Integer.MAX_VALUE','Integer.MAX_VALUE'],
+        ['Integer.MIN_VALUE','Integer.MIN_VALUE'],['Double.MAX_VALUE','Double.MAX_VALUE'],['Long.MAX_VALUE','Long.MAX_VALUE']]), 'CONSTANT');
+      this.setOutput(true, 'Number');
+      this.setColour(230);
+    }
+  };
+
+  Blockly.Blocks['logic_instanceof'] = {
+    init: function() {
+      this.appendValueInput('VALUE');
+      this.appendDummyInput().appendField('instanceof').appendField(new Blockly.FieldTextInput('MiClase'), 'CLASS');
+      this.setInputsInline(true);
+      this.setOutput(true, 'Boolean');
+      this.setColour(210);
+    }
+  };
+
+  ['long', 'float', 'short', 'byte'].forEach(function(t) {
+    Blockly.Blocks['type_' + t] = {
+      init: function() {
+        this.appendDummyInput().appendField(t);
+        this.setOutput(true, 'Type');
+        this.setColour(230);
+      }
+    };
+  });
+
+  Blockly.Blocks['type_custom'] = {
+    init: function() {
+      this.appendDummyInput().appendField('tipo').appendField(new Blockly.FieldTextInput('MiClase'), 'TYPE');
+      this.setOutput(true, 'Type');
+      this.setColour(230);
+      this.setTooltip('Cualquier tipo: el nombre de una clase, ArrayList<String>, int[], ...');
+    }
+  };
+
+  Blockly.Blocks['constant_declaration'] = {
+    init: function() {
+      this.appendValueInput('TYPE').setCheck('Type').appendField('constante');
+      this.appendDummyInput().appendField(new Blockly.FieldTextInput('MAXIMO'), 'NAME');
+      this.appendValueInput('VALUE').appendField('=');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(330);
+      this.setTooltip('static final int MAXIMO = 10; (fuera de un bloque, dentro de un bucle queda como final)');
+    }
+  };
+
+  Blockly.Blocks['input_read_boolean'] = {
+    init: function() {
+      this.appendDummyInput().appendField('leer boolean del teclado');
+      this.setOutput(true, 'Boolean');
+      this.setColour(45);
+    }
+  };
+
+  Blockly.Blocks['input_read_word'] = {
+    init: function() {
+      this.appendDummyInput().appendField('leer palabra del teclado');
+      this.setOutput(true, 'String');
+      this.setColour(45);
+      this.setTooltip('scanner.next()');
+    }
+  };
+
+  Blockly.Blocks['input_has_next_int'] = {
+    init: function() {
+      this.appendDummyInput().appendField('¿hay un entero para leer?');
+      this.setOutput(true, 'Boolean');
+      this.setColour(45);
+      this.setTooltip('scanner.hasNextInt()');
+    }
+  };
+
+  //  OBJETOS: MÉTODOS, ATRIBUTOS Y SUPER
+
+  Blockly.Blocks['method_call'] = withArgs({
+    init: function() {
+      this.appendValueInput('OBJECT').appendField('en');
+      this.appendDummyInput().appendField('llamar').appendField(new Blockly.FieldTextInput('metodo'), 'METHOD')
+        .appendField('argumentos').appendField(argsDropdown(), 'NARGS');
+      this.setInputsInline(true);
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(0);
+      this.setTooltip('objeto.metodo(a, b, ...);');
+    }
+  });
+
+  Blockly.Blocks['method_call_value'] = withArgs({
+    init: function() {
+      this.appendValueInput('OBJECT');
+      this.appendDummyInput().appendField('.').appendField(new Blockly.FieldTextInput('getNombre'), 'METHOD')
+        .appendField('argumentos').appendField(argsDropdown(), 'NARGS');
+      this.setInputsInline(true);
+      this.setOutput(true);
+      this.setColour(0);
+      this.setTooltip('Valor devuelto por objeto.metodo(...)');
+    }
+  });
+
+  Blockly.Blocks['field_get'] = {
+    init: function() {
+      this.appendValueInput('OBJECT');
+      this.appendDummyInput().appendField('.').appendField(new Blockly.FieldTextInput('nombre'), 'FIELD');
+      this.setInputsInline(true);
+      this.setOutput(true);
+      this.setColour(0);
+      this.setTooltip('objeto.atributo  (por ejemplo this.nombre)');
+    }
+  };
+
+  Blockly.Blocks['field_set'] = {
+    init: function() {
+      this.appendValueInput('OBJECT').appendField('set');
+      this.appendDummyInput().appendField('.').appendField(new Blockly.FieldTextInput('nombre'), 'FIELD');
+      this.appendValueInput('VALUE').appendField('=');
+      this.setInputsInline(true);
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(0);
+      this.setTooltip('this.nombre = nombre;');
+    }
+  };
+
+  Blockly.Blocks['super_reference'] = {
+    init: function() {
+      this.appendDummyInput().appendField('super');
+      this.setOutput(true);
+      this.setColour(0);
+      this.setTooltip('Para llamar a un método de la clase padre: super.metodo()');
+    }
+  };
+
+  Blockly.Blocks['super_constructor_call'] = withArgs({
+    init: function() {
+      this.appendDummyInput().appendField('super(...)').appendField('argumentos').appendField(argsDropdown(), 'NARGS');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(0);
+      this.setTooltip('Llama al constructor de la clase padre. Va primero dentro del constructor.');
+    }
+  });
+
+  Blockly.Blocks['abstract_method'] = {
+    init: function() {
+      this.appendDummyInput().appendField('abstract').appendField(
+        new Blockly.FieldDropdown([['public','public'],['protected','protected']]), 'MODIFIER'
+      ).appendField(new Blockly.FieldDropdown(RETURN_TYPES), 'RETURN_TYPE')
+        .appendField('método').appendField(new Blockly.FieldTextInput('area'), 'NAME');
+      this.appendStatementInput('PARAMS').appendField('parámetros');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(0);
+      this.setTooltip('Método sin cuerpo; la clase tiene que ser abstracta.');
+    }
+  };
+
+  //  ERRORES: VARIOS CATCH
+
+  Blockly.Blocks['try_multi_catch'] = {
+    init: function() {
+      this.appendStatementInput('TRY').appendField('try');
+      this.appendStatementInput('CATCHES').setCheck('CatchClause').appendField('catches');
+      this.appendStatementInput('FINALLY').appendField('finally');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(0);
+      this.setTooltip('try con varios catch. Pon bloques "catch" dentro de "catches".');
+    }
+  };
+
+  Blockly.Blocks['catch_clause'] = {
+    init: function() {
+      this.appendDummyInput().appendField('catch (').appendField(new Blockly.FieldTextInput('ArithmeticException'), 'TYPE')
+        .appendField(new Blockly.FieldTextInput('e'), 'VAR').appendField(')');
+      this.appendStatementInput('DO').appendField('hacer');
+      this.setPreviousStatement(true, 'CatchClause');
+      this.setNextStatement(true, 'CatchClause');
+      this.setColour(0);
+      this.setTooltip('Un catch. Para capturar dos tipos a la vez: IOException | NumberFormatException');
+    }
+  };
+
+  //  ARRAYS 2D
+
+  Blockly.Blocks['array2d_declaration'] = {
+    init: function() {
+      this.appendValueInput('TYPE').setCheck('Type').appendField('declarar matriz');
+      this.appendDummyInput().appendField(new Blockly.FieldTextInput('matriz'), 'VAR');
+      this.appendValueInput('ROWS').appendField('filas');
+      this.appendValueInput('COLS').appendField('columnas');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(60);
+      this.setTooltip('int[][] matriz = new int[filas][columnas];');
+    }
+  };
+
+  Blockly.Blocks['array2d_access'] = {
+    init: function() {
+      this.appendDummyInput().appendField(new Blockly.FieldTextInput('matriz'), 'VAR');
+      this.appendValueInput('ROW').appendField('[');
+      this.appendValueInput('COL').appendField('][');
+      this.appendDummyInput().appendField(']');
+      this.setInputsInline(true);
+      this.setOutput(true);
+      this.setColour(60);
+    }
+  };
+
+  Blockly.Blocks['array2d_assignment'] = {
+    init: function() {
+      this.appendDummyInput().appendField(new Blockly.FieldTextInput('matriz'), 'VAR');
+      this.appendValueInput('ROW').appendField('[');
+      this.appendValueInput('COL').appendField('][');
+      this.appendValueInput('VALUE').appendField('] =');
+      this.setInputsInline(true);
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(60);
+    }
+  };
+
+  Blockly.Blocks['util_value'] = {
+    init: function() {
+      this.appendDummyInput().appendField(new Blockly.FieldDropdown([
+        ['Arrays.toString','Arrays.toString'],['Arrays.deepToString','Arrays.deepToString'],
+        ['Collections.max','Collections.max'],['Collections.min','Collections.min']]), 'FUNC')
+        .appendField('(').appendField(new Blockly.FieldTextInput('lista'), 'NAME').appendField(')');
+      this.setOutput(true);
+      this.setColour(60);
+    }
+  };
+
+  Blockly.Blocks['collections_util'] = {
+    init: function() {
+      this.appendDummyInput().appendField(new Blockly.FieldDropdown([
+        ['Collections.sort','Collections.sort'],['Collections.reverse','Collections.reverse'],
+        ['Collections.shuffle','Collections.shuffle'],['Arrays.sort','Arrays.sort']]), 'FUNC')
+        .appendField('(').appendField(new Blockly.FieldTextInput('lista'), 'NAME').appendField(')');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(60);
+      this.setTooltip('Ordenar, invertir o mezclar una lista (o ordenar un array con Arrays.sort)');
+    }
+  };
+
+  //  MÁS COLECCIONES
+
+  Blockly.Blocks['collection_declaration'] = {
+    init: function() {
+      this.appendDummyInput().appendField('crear').appendField(new Blockly.FieldDropdown([
+        ['ArrayList','ArrayList'],['LinkedList','LinkedList'],['HashSet','HashSet'],['TreeSet','TreeSet'],
+        ['Stack','Stack'],['ArrayDeque (cola)','ArrayDeque']]), 'COLLECTION')
+        .appendField('<').appendField(new Blockly.FieldTextInput('Integer'), 'ELEMENT_TYPE').appendField('>')
+        .appendField(new Blockly.FieldTextInput('coleccion'), 'NAME');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(260);
+      this.setTooltip('Usa Integer, Double, String, Character... o el nombre de tu clase');
+    }
+  };
+
+  Blockly.Blocks['collection_do'] = {
+    init: function() {
+      this.appendDummyInput().appendField('en').appendField(new Blockly.FieldTextInput('coleccion'), 'NAME')
+        .appendField(new Blockly.FieldDropdown([
+          ['add','add'],['remove (valor)','remove'],['push','push'],['offer','offer'],['addFirst','addFirst'],['addLast','addLast'],['sort','sort'],['forEach','forEach'],['removeIf','removeIf']]), 'METHOD');
+      this.appendValueInput('VALUE');
+      this.setInputsInline(true);
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(260);
+    }
+  };
+
+  Blockly.Blocks['collection_do_no_arg'] = {
+    init: function() {
+      this.appendDummyInput().appendField('en').appendField(new Blockly.FieldTextInput('coleccion'), 'NAME')
+        .appendField(new Blockly.FieldDropdown([
+          ['clear','clear'],['pop','pop'],['poll','poll'],['removeFirst','removeFirst'],['removeLast','removeLast']]), 'METHOD');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(260);
+    }
+  };
+
+  Blockly.Blocks['collection_value'] = {
+    init: function() {
+      this.appendDummyInput().appendField(new Blockly.FieldTextInput('coleccion'), 'NAME').appendField('.')
+        .appendField(new Blockly.FieldDropdown([
+          ['size()','size'],['isEmpty()','isEmpty'],['peek()','peek'],['pop()','pop'],['poll()','poll'],
+          ['getFirst()','getFirst'],['getLast()','getLast'],['first()','first'],['last()','last'],
+          ['keySet()','keySet'],['values()','values']]), 'METHOD');
+      this.setOutput(true);
+      this.setColour(260);
+    }
+  };
+
+  Blockly.Blocks['collection_value_arg'] = {
+    init: function() {
+      this.appendDummyInput().appendField(new Blockly.FieldTextInput('coleccion'), 'NAME').appendField('.')
+        .appendField(new Blockly.FieldDropdown([
+          ['contains','contains'],['indexOf','indexOf'],['get','get'],['containsKey','containsKey'],['containsValue','containsValue']]), 'METHOD');
+      this.appendValueInput('VALUE').appendField('(');
+      this.appendDummyInput().appendField(')');
+      this.setInputsInline(true);
+      this.setOutput(true);
+      this.setColour(260);
+    }
+  };
+
+  Blockly.Blocks['map_get_or_default'] = {
+    init: function() {
+      this.appendDummyInput().appendField('mapa').appendField(new Blockly.FieldTextInput('mapa'), 'MAP').appendField('getOrDefault');
+      this.appendValueInput('KEY').appendField('clave');
+      this.appendValueInput('DEFAULT').appendField('si no, ');
+      this.setInputsInline(true);
+      this.setOutput(true);
+      this.setColour(260);
+      this.setTooltip('mapa.getOrDefault(clave, valorPorDefecto)');
+    }
+  };
+
+
+  //  JAVA MODERNO (paso 4): switch con flechas, records, streams, Optional, fechas...
+
+
+  Blockly.Blocks['switch_arrow'] = {
+    init: function() {
+      this.appendValueInput('EXPR').appendField('switch ->');
+      this.appendStatementInput('CASES').setCheck('ArrowCase').appendField('casos');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(120);
+      this.setTooltip('switch (x) { case 1 -> { ... } default -> { ... } }  (sin break)');
+    }
+  };
+
+  Blockly.Blocks['case_arrow'] = {
+    init: function() {
+      this.appendValueInput('CASE').appendField('caso');
+      this.appendStatementInput('DO').appendField('->');
+      this.setPreviousStatement(true, 'ArrowCase');
+      this.setNextStatement(true, 'ArrowCase');
+      this.setColour(120);
+    }
+  };
+
+  Blockly.Blocks['default_arrow'] = {
+    init: function() {
+      this.appendStatementInput('DO').appendField('default ->');
+      this.setPreviousStatement(true, 'ArrowCase');
+      this.setNextStatement(true, 'ArrowCase');
+      this.setColour(120);
+    }
+  };
+
+  Blockly.Blocks['switch_expression'] = {
+    init: function() {
+      this.appendValueInput('EXPR').appendField('valor según switch');
+      this.appendStatementInput('CASES').setCheck('ValueCase').appendField('casos');
+      this.setOutput(true);
+      this.setColour(120);
+      this.setTooltip('String nombre = switch (dia) { case 1 -> "lunes"; default -> "otro"; };');
+    }
+  };
+
+  Blockly.Blocks['case_value'] = {
+    init: function() {
+      this.appendValueInput('CASE').appendField('caso');
+      this.appendValueInput('RESULT').appendField('->');
+      this.setInputsInline(true);
+      this.setPreviousStatement(true, 'ValueCase');
+      this.setNextStatement(true, 'ValueCase');
+      this.setColour(120);
+    }
+  };
+
+  Blockly.Blocks['default_value'] = {
+    init: function() {
+      this.appendValueInput('RESULT').appendField('default ->');
+      this.setPreviousStatement(true, 'ValueCase');
+      this.setNextStatement(true, 'ValueCase');
+      this.setColour(120);
+    }
+  };
+
+  Blockly.Blocks['controls_labeled'] = {
+    init: function() {
+      this.appendDummyInput().appendField('etiqueta').appendField(new Blockly.FieldTextInput('externo'), 'LABEL').appendField(':');
+      this.appendStatementInput('DO');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(120);
+      this.setTooltip('Pon un bucle dentro para poder salir de él con "break externo"');
+    }
+  };
+
+  Blockly.Blocks['controls_jump_label'] = {
+    init: function() {
+      this.appendDummyInput().appendField(new Blockly.FieldDropdown([['break','break'],['continue','continue']]), 'JUMP')
+        .appendField(new Blockly.FieldTextInput('externo'), 'LABEL');
+      this.setPreviousStatement(true);
+      this.setColour(120);
+    }
+  };
+
+  Blockly.Blocks['assert_block'] = {
+    init: function() {
+      this.appendValueInput('CONDITION').setCheck('Boolean').appendField('assert');
+      this.appendValueInput('MESSAGE').appendField('mensaje (opcional)');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(120);
+      this.setTooltip('assert condición : "mensaje"; (se activa con java -ea)');
+    }
+  };
+
+  Blockly.Blocks['math_bitwise'] = {
+    init: function() {
+      this.appendValueInput('A').setCheck('Number');
+      this.appendValueInput('B').setCheck('Number').appendField(new Blockly.FieldDropdown([
+        ['&','&'],['|','|'],['^','^'],['<<','<<'],['>>','>>'],['>>>','>>>']]), 'OP');
+      this.setInputsInline(true);
+      this.setOutput(true, 'Number');
+      this.setColour(230);
+      this.setTooltip('Operadores de bits');
+    }
+  };
+
+  Blockly.Blocks['math_bitwise_not'] = {
+    init: function() {
+      this.appendValueInput('NUM').setCheck('Number').appendField('~');
+      this.setOutput(true, 'Number');
+      this.setColour(230);
+    }
+  };
+
+  Blockly.Blocks['logic_instanceof_pattern'] = {
+    init: function() {
+      this.appendValueInput('VALUE');
+      this.appendDummyInput().appendField('instanceof').appendField(new Blockly.FieldTextInput('Perro'), 'CLASS')
+        .appendField(new Blockly.FieldTextInput('p'), 'VAR');
+      this.setInputsInline(true);
+      this.setOutput(true, 'Boolean');
+      this.setColour(210);
+      this.setTooltip('if (a instanceof Perro p) { usar p } — comprueba el tipo y crea la variable');
+    }
+  };
+
+  Blockly.Blocks['text_block'] = {
+    init: function() {
+      this.appendDummyInput().appendField('bloque de texto """')
+        .appendField(new Blockly.FieldTextInput('línea 1\\nlínea 2'), 'TEXT');
+      this.setOutput(true, 'String');
+      this.setColour(160);
+      this.setTooltip('Text block de Java 15. Escribe \\n donde quieras un salto de línea.');
+    }
+  };
+
+  Blockly.Blocks['type_var'] = {
+    init: function() {
+      this.appendDummyInput().appendField('var');
+      this.setOutput(true, 'Type');
+      this.setColour(230);
+      this.setTooltip('Java deduce el tipo del valor: var lista = new ArrayList<String>();');
+    }
+  };
+
+  Blockly.Blocks['record_definition'] = {
+    init: function() {
+      this.appendDummyInput().appendField('record').appendField(new Blockly.FieldTextInput('Persona'), 'NAME')
+        .appendField('(').appendField(new Blockly.FieldTextInput('String nombre, int edad'), 'COMPONENTS').appendField(')');
+      this.setColour(0);
+      this.setTooltip('Clase de datos: crea constructor, getters (p.nombre()), equals y toString solos');
+    }
+  };
+
+  Blockly.Blocks['anonymous_class'] = {
+    init: function() {
+      this.appendDummyInput().appendField('new').appendField(new Blockly.FieldTextInput('Runnable'), 'CLASS').appendField('() { }');
+      this.appendStatementInput('METHODS').appendField('métodos');
+      this.setOutput(true);
+      this.setColour(0);
+      this.setTooltip('Clase anónima: implementa una interfaz o extiende una clase sin darle nombre');
+    }
+  };
+
+  Blockly.Blocks['lambda_block'] = {
+    init: function() {
+      this.appendDummyInput().appendField('(').appendField(new Blockly.FieldTextInput('x'), 'PARAMS').appendField(') -> {');
+      this.appendStatementInput('BODY');
+      this.appendDummyInput().appendField('}');
+      this.setOutput(true);
+      this.setColour(180);
+      this.setTooltip('Lambda con varias instrucciones; usa return si devuelve algo');
+    }
+  };
+
+  Blockly.Blocks['method_reference'] = {
+    init: function() {
+      this.appendDummyInput().appendField(new Blockly.FieldTextInput('System.out'), 'TARGET').appendField('::')
+        .appendField(new Blockly.FieldTextInput('println'), 'METHOD');
+      this.setOutput(true);
+      this.setColour(180);
+      this.setTooltip('Referencia a método: System.out::println, String::length, Persona::new');
+    }
+  };
+
+  Blockly.Blocks['stream_start'] = {
+    init: function() {
+      this.appendDummyInput().appendField(new Blockly.FieldTextInput('lista'), 'NAME').appendField('.stream()');
+      this.setOutput(true, 'Stream');
+      this.setColour(180);
+    }
+  };
+
+  Blockly.Blocks['stream_op'] = {
+    init: function() {
+      this.appendValueInput('STREAM').setCheck('Stream');
+      this.appendDummyInput().appendField('.').appendField(new Blockly.FieldDropdown([
+        ['filter','filter'],['map','map'],['sorted','sorted'],['distinct','distinct'],['limit','limit'],['skip','skip']]), 'OP');
+      this.appendValueInput('ARG').appendField('(');
+      this.appendDummyInput().appendField(')');
+      this.setInputsInline(true);
+      this.setOutput(true, 'Stream');
+      this.setColour(180);
+      this.setTooltip('filter y map llevan una lambda; limit y skip un número; sorted y distinct nada');
+    }
+  };
+
+  Blockly.Blocks['stream_terminal'] = {
+    init: function() {
+      this.appendValueInput('STREAM').setCheck('Stream');
+      this.appendDummyInput().appendField('.').appendField(new Blockly.FieldDropdown([
+        ['a lista','toList'],['count','count'],['suma','sum'],['media','average'],['máximo','max'],['mínimo','min'],
+        ['anyMatch','anyMatch'],['allMatch','allMatch'],['noneMatch','noneMatch']]), 'OP');
+      this.appendValueInput('ARG').appendField('(');
+      this.appendDummyInput().appendField(')');
+      this.setInputsInline(true);
+      this.setOutput(true);
+      this.setColour(180);
+      this.setTooltip('Termina el stream. Solo anyMatch/allMatch/noneMatch usan la lambda.');
+    }
+  };
+
+  Blockly.Blocks['stream_for_each'] = {
+    init: function() {
+      this.appendValueInput('STREAM').appendField('para cada elemento de');
+      this.appendValueInput('ARG').appendField('hacer');
+      this.setInputsInline(true);
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(180);
+      this.setTooltip('lista.forEach(System.out::println) o stream.forEach(x -> ...)');
+    }
+  };
+
+  Blockly.Blocks['optional_create'] = {
+    init: function() {
+      this.appendValueInput('VALUE').appendField('Optional.').appendField(new Blockly.FieldDropdown([
+        ['ofNullable','ofNullable'],['of','of'],['empty','empty']]), 'HOW');
+      this.setOutput(true);
+      this.setColour(180);
+    }
+  };
+
+  Blockly.Blocks['optional_value'] = {
+    init: function() {
+      this.appendValueInput('OPTIONAL');
+      this.appendDummyInput().appendField('.').appendField(new Blockly.FieldDropdown([
+        ['isPresent()','isPresent'],['isEmpty()','isEmpty'],['get()','get'],['orElse','orElse']]), 'METHOD');
+      this.appendValueInput('ARG').appendField('(si orElse)');
+      this.setInputsInline(true);
+      this.setOutput(true);
+      this.setColour(180);
+    }
+  };
+
+  Blockly.Blocks['thread_join'] = {
+    init: function() {
+      this.appendDummyInput().appendField('esperar a que termine').appendField(new Blockly.FieldTextInput('miHilo'), 'NAME');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(30);
+      this.setTooltip('hilo.join();');
+    }
+  };
+
+  Blockly.Blocks['executor_create'] = {
+    init: function() {
+      this.appendDummyInput().appendField('crear grupo de hilos').appendField(new Blockly.FieldTextInput('executor'), 'NAME');
+      this.appendValueInput('THREADS').setCheck('Number').appendField('hilos');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(30);
+      this.setTooltip('ExecutorService executor = Executors.newFixedThreadPool(n);');
+    }
+  };
+
+  Blockly.Blocks['executor_submit'] = {
+    init: function() {
+      this.appendDummyInput().appendField('enviar tarea a').appendField(new Blockly.FieldTextInput('executor'), 'NAME');
+      this.appendStatementInput('BODY').appendField('hacer');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(30);
+    }
+  };
+
+  Blockly.Blocks['executor_shutdown'] = {
+    init: function() {
+      this.appendDummyInput().appendField('cerrar y esperar').appendField(new Blockly.FieldTextInput('executor'), 'NAME');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(30);
+      this.setTooltip('shutdown() y awaitTermination(1 minuto)');
+    }
+  };
+
+  Blockly.Blocks['atomic_declaration'] = {
+    init: function() {
+      this.appendDummyInput().appendField('crear AtomicInteger').appendField(new Blockly.FieldTextInput('contador'), 'NAME');
+      this.appendValueInput('VALUE').appendField('=');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(30);
+      this.setTooltip('Contador seguro entre hilos. Usa "llamar incrementAndGet" o "get" sobre él.');
+    }
+  };
+
+  Blockly.Blocks['date_now'] = {
+    init: function() {
+      this.appendDummyInput().appendField(new Blockly.FieldDropdown([
+        ['LocalDate','LocalDate'],['LocalDateTime','LocalDateTime'],['LocalTime','LocalTime']]), 'CLASS').appendField('.now()');
+      this.setOutput(true);
+      this.setColour(200);
+    }
+  };
+
+  Blockly.Blocks['date_of'] = {
+    init: function() {
+      this.appendValueInput('YEAR').setCheck('Number').appendField('LocalDate.of(');
+      this.appendValueInput('MONTH').setCheck('Number').appendField(',');
+      this.appendValueInput('DAY').setCheck('Number').appendField(',');
+      this.appendDummyInput().appendField(')');
+      this.setInputsInline(true);
+      this.setOutput(true);
+      this.setColour(200);
+    }
+  };
+
 
   workspace = Blockly.inject(blocklyDiv, {
     toolbox: toolbox,

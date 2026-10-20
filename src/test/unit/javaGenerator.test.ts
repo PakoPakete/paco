@@ -234,7 +234,7 @@ suite('Full program', () => {
         ));
         const l = lines(java);
         assert.strictEqual(l[0], 'import java.util.List;');
-        assert.ok(l.indexOf('public class PacoProgram {') < l.indexOf('public static void main(String[] args) {'));
-        assert.ok(l.indexOf('System.out.println("hola");') < l.indexOf('public class Perro {'));
+        assert.ok(l.indexOf('public class PacoProgram {') < l.indexOf('public static void main(String[] args) throws Exception {'));
+        assert.ok(l.indexOf('System.out.println("hola");') < l.indexOf('public static class Perro {'));
     });
 });
