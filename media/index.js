@@ -54,9 +54,18 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'controls_switch' },
           { kind: 'block', type: 'controls_case' },
           { kind: 'block', type: 'controls_default' },
+          { kind: 'block', type: 'switch_arrow' },
+          { kind: 'block', type: 'case_arrow' },
+          { kind: 'block', type: 'default_arrow' },
+          { kind: 'block', type: 'switch_expression' },
+          { kind: 'block', type: 'case_value' },
+          { kind: 'block', type: 'default_value' },
           { kind: 'block', type: 'controls_stop' },
           { kind: 'block', type: 'controls_break' },
           { kind: 'block', type: 'controls_continue' },
+          { kind: 'block', type: 'controls_labeled' },
+          { kind: 'block', type: 'controls_jump_label' },
+          { kind: 'block', type: 'assert_block' },
           { kind: 'block', type: 'controls_return' },
           { kind: 'block', type: 'ternary_operator' },
         ]
@@ -92,6 +101,8 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'math_two_args' },
           { kind: 'block', type: 'math_constant_java' },
           { kind: 'block', type: 'math_cast' },
+          { kind: 'block', type: 'math_bitwise' },
+          { kind: 'block', type: 'math_bitwise_not' },
         ]
       },
 
@@ -118,6 +129,7 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'logic_negate' },
           { kind: 'block', type: 'logic_null' },
           { kind: 'block', type: 'logic_instanceof' },
+          { kind: 'block', type: 'logic_instanceof_pattern' },
         ]
       },
 
@@ -130,6 +142,7 @@ window.addEventListener('load', () => {
         contents: [
           { kind: 'block', type: 'text' },
           { kind: 'block', type: 'char_literal' },
+          { kind: 'block', type: 'text_block' },
           { kind: 'block', type: 'text_print' },
           { kind: 'block', type: 'text_print_inline' },
           { kind: 'block', type: 'text_printf' },
@@ -185,6 +198,7 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'type_short' },
           { kind: 'block', type: 'type_byte' },
           { kind: 'block', type: 'type_custom' },
+          { kind: 'block', type: 'type_var' },
           { kind: 'block', type: 'type_void' },
           { kind: 'block', type: 'enum_definition' },
         ]
@@ -272,6 +286,8 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'method_definition' },
           { kind: 'block', type: 'method_override' },
           { kind: 'block', type: 'abstract_method' },
+          { kind: 'block', type: 'record_definition' },
+          { kind: 'block', type: 'anonymous_class' },
           { kind: 'block', type: 'object_instantiation' },
           { kind: 'block', type: 'this_reference' },
           { kind: 'block', type: 'method_call' },
@@ -292,6 +308,14 @@ window.addEventListener('load', () => {
         contents: [
           { kind: 'block', type: 'lambda_function' },
           { kind: 'block', type: 'stream_filter' },
+          { kind: 'block', type: 'lambda_block' },
+          { kind: 'block', type: 'method_reference' },
+          { kind: 'block', type: 'stream_start' },
+          { kind: 'block', type: 'stream_op' },
+          { kind: 'block', type: 'stream_terminal' },
+          { kind: 'block', type: 'stream_for_each' },
+          { kind: 'block', type: 'optional_create' },
+          { kind: 'block', type: 'optional_value' },
           { kind: 'block', type: 'generic_function' },
         ]
       },
@@ -306,6 +330,11 @@ window.addEventListener('load', () => {
           { kind: 'block', type: 'thread_create' },
           { kind: 'block', type: 'synchronized_block' },
           { kind: 'block', type: 'parallel_exec' },
+          { kind: 'block', type: 'thread_join' },
+          { kind: 'block', type: 'executor_create' },
+          { kind: 'block', type: 'executor_submit' },
+          { kind: 'block', type: 'executor_shutdown' },
+          { kind: 'block', type: 'atomic_declaration' },
         ]
       },
 
@@ -339,6 +368,8 @@ window.addEventListener('load', () => {
         contents: [
           { kind: 'block', type: 'system_timer' },
           { kind: 'block', type: 'system_reset_timer' },
+          { kind: 'block', type: 'date_now' },
+          { kind: 'block', type: 'date_of' },
         ]
       },
 
@@ -1991,7 +2022,7 @@ window.addEventListener('load', () => {
     init: function() {
       this.appendDummyInput().appendField('en').appendField(new Blockly.FieldTextInput('coleccion'), 'NAME')
         .appendField(new Blockly.FieldDropdown([
-          ['add','add'],['remove (valor)','remove'],['push','push'],['offer','offer'],['addFirst','addFirst'],['addLast','addLast']]), 'METHOD');
+          ['add','add'],['remove (valor)','remove'],['push','push'],['offer','offer'],['addFirst','addFirst'],['addLast','addLast'],['sort','sort'],['forEach','forEach'],['removeIf','removeIf']]), 'METHOD');
       this.appendValueInput('VALUE');
       this.setInputsInline(true);
       this.setPreviousStatement(true);
@@ -2045,6 +2076,335 @@ window.addEventListener('load', () => {
       this.setOutput(true);
       this.setColour(260);
       this.setTooltip('mapa.getOrDefault(clave, valorPorDefecto)');
+    }
+  };
+
+
+  //  JAVA MODERNO (paso 4): switch con flechas, records, streams, Optional, fechas...
+
+
+  Blockly.Blocks['switch_arrow'] = {
+    init: function() {
+      this.appendValueInput('EXPR').appendField('switch ->');
+      this.appendStatementInput('CASES').setCheck('ArrowCase').appendField('casos');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(120);
+      this.setTooltip('switch (x) { case 1 -> { ... } default -> { ... } }  (sin break)');
+    }
+  };
+
+  Blockly.Blocks['case_arrow'] = {
+    init: function() {
+      this.appendValueInput('CASE').appendField('caso');
+      this.appendStatementInput('DO').appendField('->');
+      this.setPreviousStatement(true, 'ArrowCase');
+      this.setNextStatement(true, 'ArrowCase');
+      this.setColour(120);
+    }
+  };
+
+  Blockly.Blocks['default_arrow'] = {
+    init: function() {
+      this.appendStatementInput('DO').appendField('default ->');
+      this.setPreviousStatement(true, 'ArrowCase');
+      this.setNextStatement(true, 'ArrowCase');
+      this.setColour(120);
+    }
+  };
+
+  Blockly.Blocks['switch_expression'] = {
+    init: function() {
+      this.appendValueInput('EXPR').appendField('valor según switch');
+      this.appendStatementInput('CASES').setCheck('ValueCase').appendField('casos');
+      this.setOutput(true);
+      this.setColour(120);
+      this.setTooltip('String nombre = switch (dia) { case 1 -> "lunes"; default -> "otro"; };');
+    }
+  };
+
+  Blockly.Blocks['case_value'] = {
+    init: function() {
+      this.appendValueInput('CASE').appendField('caso');
+      this.appendValueInput('RESULT').appendField('->');
+      this.setInputsInline(true);
+      this.setPreviousStatement(true, 'ValueCase');
+      this.setNextStatement(true, 'ValueCase');
+      this.setColour(120);
+    }
+  };
+
+  Blockly.Blocks['default_value'] = {
+    init: function() {
+      this.appendValueInput('RESULT').appendField('default ->');
+      this.setPreviousStatement(true, 'ValueCase');
+      this.setNextStatement(true, 'ValueCase');
+      this.setColour(120);
+    }
+  };
+
+  Blockly.Blocks['controls_labeled'] = {
+    init: function() {
+      this.appendDummyInput().appendField('etiqueta').appendField(new Blockly.FieldTextInput('externo'), 'LABEL').appendField(':');
+      this.appendStatementInput('DO');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(120);
+      this.setTooltip('Pon un bucle dentro para poder salir de él con "break externo"');
+    }
+  };
+
+  Blockly.Blocks['controls_jump_label'] = {
+    init: function() {
+      this.appendDummyInput().appendField(new Blockly.FieldDropdown([['break','break'],['continue','continue']]), 'JUMP')
+        .appendField(new Blockly.FieldTextInput('externo'), 'LABEL');
+      this.setPreviousStatement(true);
+      this.setColour(120);
+    }
+  };
+
+  Blockly.Blocks['assert_block'] = {
+    init: function() {
+      this.appendValueInput('CONDITION').setCheck('Boolean').appendField('assert');
+      this.appendValueInput('MESSAGE').appendField('mensaje (opcional)');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(120);
+      this.setTooltip('assert condición : "mensaje"; (se activa con java -ea)');
+    }
+  };
+
+  Blockly.Blocks['math_bitwise'] = {
+    init: function() {
+      this.appendValueInput('A').setCheck('Number');
+      this.appendValueInput('B').setCheck('Number').appendField(new Blockly.FieldDropdown([
+        ['&','&'],['|','|'],['^','^'],['<<','<<'],['>>','>>'],['>>>','>>>']]), 'OP');
+      this.setInputsInline(true);
+      this.setOutput(true, 'Number');
+      this.setColour(230);
+      this.setTooltip('Operadores de bits');
+    }
+  };
+
+  Blockly.Blocks['math_bitwise_not'] = {
+    init: function() {
+      this.appendValueInput('NUM').setCheck('Number').appendField('~');
+      this.setOutput(true, 'Number');
+      this.setColour(230);
+    }
+  };
+
+  Blockly.Blocks['logic_instanceof_pattern'] = {
+    init: function() {
+      this.appendValueInput('VALUE');
+      this.appendDummyInput().appendField('instanceof').appendField(new Blockly.FieldTextInput('Perro'), 'CLASS')
+        .appendField(new Blockly.FieldTextInput('p'), 'VAR');
+      this.setInputsInline(true);
+      this.setOutput(true, 'Boolean');
+      this.setColour(210);
+      this.setTooltip('if (a instanceof Perro p) { usar p } — comprueba el tipo y crea la variable');
+    }
+  };
+
+  Blockly.Blocks['text_block'] = {
+    init: function() {
+      this.appendDummyInput().appendField('bloque de texto """')
+        .appendField(new Blockly.FieldTextInput('línea 1\\nlínea 2'), 'TEXT');
+      this.setOutput(true, 'String');
+      this.setColour(160);
+      this.setTooltip('Text block de Java 15. Escribe \\n donde quieras un salto de línea.');
+    }
+  };
+
+  Blockly.Blocks['type_var'] = {
+    init: function() {
+      this.appendDummyInput().appendField('var');
+      this.setOutput(true, 'Type');
+      this.setColour(230);
+      this.setTooltip('Java deduce el tipo del valor: var lista = new ArrayList<String>();');
+    }
+  };
+
+  Blockly.Blocks['record_definition'] = {
+    init: function() {
+      this.appendDummyInput().appendField('record').appendField(new Blockly.FieldTextInput('Persona'), 'NAME')
+        .appendField('(').appendField(new Blockly.FieldTextInput('String nombre, int edad'), 'COMPONENTS').appendField(')');
+      this.setColour(0);
+      this.setTooltip('Clase de datos: crea constructor, getters (p.nombre()), equals y toString solos');
+    }
+  };
+
+  Blockly.Blocks['anonymous_class'] = {
+    init: function() {
+      this.appendDummyInput().appendField('new').appendField(new Blockly.FieldTextInput('Runnable'), 'CLASS').appendField('() { }');
+      this.appendStatementInput('METHODS').appendField('métodos');
+      this.setOutput(true);
+      this.setColour(0);
+      this.setTooltip('Clase anónima: implementa una interfaz o extiende una clase sin darle nombre');
+    }
+  };
+
+  Blockly.Blocks['lambda_block'] = {
+    init: function() {
+      this.appendDummyInput().appendField('(').appendField(new Blockly.FieldTextInput('x'), 'PARAMS').appendField(') -> {');
+      this.appendStatementInput('BODY');
+      this.appendDummyInput().appendField('}');
+      this.setOutput(true);
+      this.setColour(180);
+      this.setTooltip('Lambda con varias instrucciones; usa return si devuelve algo');
+    }
+  };
+
+  Blockly.Blocks['method_reference'] = {
+    init: function() {
+      this.appendDummyInput().appendField(new Blockly.FieldTextInput('System.out'), 'TARGET').appendField('::')
+        .appendField(new Blockly.FieldTextInput('println'), 'METHOD');
+      this.setOutput(true);
+      this.setColour(180);
+      this.setTooltip('Referencia a método: System.out::println, String::length, Persona::new');
+    }
+  };
+
+  Blockly.Blocks['stream_start'] = {
+    init: function() {
+      this.appendDummyInput().appendField(new Blockly.FieldTextInput('lista'), 'NAME').appendField('.stream()');
+      this.setOutput(true, 'Stream');
+      this.setColour(180);
+    }
+  };
+
+  Blockly.Blocks['stream_op'] = {
+    init: function() {
+      this.appendValueInput('STREAM').setCheck('Stream');
+      this.appendDummyInput().appendField('.').appendField(new Blockly.FieldDropdown([
+        ['filter','filter'],['map','map'],['sorted','sorted'],['distinct','distinct'],['limit','limit'],['skip','skip']]), 'OP');
+      this.appendValueInput('ARG').appendField('(');
+      this.appendDummyInput().appendField(')');
+      this.setInputsInline(true);
+      this.setOutput(true, 'Stream');
+      this.setColour(180);
+      this.setTooltip('filter y map llevan una lambda; limit y skip un número; sorted y distinct nada');
+    }
+  };
+
+  Blockly.Blocks['stream_terminal'] = {
+    init: function() {
+      this.appendValueInput('STREAM').setCheck('Stream');
+      this.appendDummyInput().appendField('.').appendField(new Blockly.FieldDropdown([
+        ['a lista','toList'],['count','count'],['suma','sum'],['media','average'],['máximo','max'],['mínimo','min'],
+        ['anyMatch','anyMatch'],['allMatch','allMatch'],['noneMatch','noneMatch']]), 'OP');
+      this.appendValueInput('ARG').appendField('(');
+      this.appendDummyInput().appendField(')');
+      this.setInputsInline(true);
+      this.setOutput(true);
+      this.setColour(180);
+      this.setTooltip('Termina el stream. Solo anyMatch/allMatch/noneMatch usan la lambda.');
+    }
+  };
+
+  Blockly.Blocks['stream_for_each'] = {
+    init: function() {
+      this.appendValueInput('STREAM').appendField('para cada elemento de');
+      this.appendValueInput('ARG').appendField('hacer');
+      this.setInputsInline(true);
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(180);
+      this.setTooltip('lista.forEach(System.out::println) o stream.forEach(x -> ...)');
+    }
+  };
+
+  Blockly.Blocks['optional_create'] = {
+    init: function() {
+      this.appendValueInput('VALUE').appendField('Optional.').appendField(new Blockly.FieldDropdown([
+        ['ofNullable','ofNullable'],['of','of'],['empty','empty']]), 'HOW');
+      this.setOutput(true);
+      this.setColour(180);
+    }
+  };
+
+  Blockly.Blocks['optional_value'] = {
+    init: function() {
+      this.appendValueInput('OPTIONAL');
+      this.appendDummyInput().appendField('.').appendField(new Blockly.FieldDropdown([
+        ['isPresent()','isPresent'],['isEmpty()','isEmpty'],['get()','get'],['orElse','orElse']]), 'METHOD');
+      this.appendValueInput('ARG').appendField('(si orElse)');
+      this.setInputsInline(true);
+      this.setOutput(true);
+      this.setColour(180);
+    }
+  };
+
+  Blockly.Blocks['thread_join'] = {
+    init: function() {
+      this.appendDummyInput().appendField('esperar a que termine').appendField(new Blockly.FieldTextInput('miHilo'), 'NAME');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(30);
+      this.setTooltip('hilo.join();');
+    }
+  };
+
+  Blockly.Blocks['executor_create'] = {
+    init: function() {
+      this.appendDummyInput().appendField('crear grupo de hilos').appendField(new Blockly.FieldTextInput('executor'), 'NAME');
+      this.appendValueInput('THREADS').setCheck('Number').appendField('hilos');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(30);
+      this.setTooltip('ExecutorService executor = Executors.newFixedThreadPool(n);');
+    }
+  };
+
+  Blockly.Blocks['executor_submit'] = {
+    init: function() {
+      this.appendDummyInput().appendField('enviar tarea a').appendField(new Blockly.FieldTextInput('executor'), 'NAME');
+      this.appendStatementInput('BODY').appendField('hacer');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(30);
+    }
+  };
+
+  Blockly.Blocks['executor_shutdown'] = {
+    init: function() {
+      this.appendDummyInput().appendField('cerrar y esperar').appendField(new Blockly.FieldTextInput('executor'), 'NAME');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(30);
+      this.setTooltip('shutdown() y awaitTermination(1 minuto)');
+    }
+  };
+
+  Blockly.Blocks['atomic_declaration'] = {
+    init: function() {
+      this.appendDummyInput().appendField('crear AtomicInteger').appendField(new Blockly.FieldTextInput('contador'), 'NAME');
+      this.appendValueInput('VALUE').appendField('=');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(30);
+      this.setTooltip('Contador seguro entre hilos. Usa "llamar incrementAndGet" o "get" sobre él.');
+    }
+  };
+
+  Blockly.Blocks['date_now'] = {
+    init: function() {
+      this.appendDummyInput().appendField(new Blockly.FieldDropdown([
+        ['LocalDate','LocalDate'],['LocalDateTime','LocalDateTime'],['LocalTime','LocalTime']]), 'CLASS').appendField('.now()');
+      this.setOutput(true);
+      this.setColour(200);
+    }
+  };
+
+  Blockly.Blocks['date_of'] = {
+    init: function() {
+      this.appendValueInput('YEAR').setCheck('Number').appendField('LocalDate.of(');
+      this.appendValueInput('MONTH').setCheck('Number').appendField(',');
+      this.appendValueInput('DAY').setCheck('Number').appendField(',');
+      this.appendDummyInput().appendField(')');
+      this.setInputsInline(true);
+      this.setOutput(true);
+      this.setColour(200);
     }
   };
 

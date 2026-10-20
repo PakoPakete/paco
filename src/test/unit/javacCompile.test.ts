@@ -26,6 +26,17 @@ function assertCompiles(program: string): void {
     }
 }
 
+const streamOf = (name: string) => block('stream_start', field('NAME', name));
+const terminal = (op: string) => block('stream_terminal', field('OP', op) + value('STREAM', streamOf('nums')));
+const timesTwo = block('lambda_function', field('PARAMS', 'x') +
+    value('BODY', block('math_arithmetic', field('OP', 'MULTIPLY') + value('A', varGet('x')) + value('B', num(2)))));
+const sorted = block('stream_op', field('OP', 'sorted') + value('STREAM', streamOf('nums')));
+const doubled = block('stream_op', field('OP', 'map') + value('STREAM', sorted) + value('ARG', timesTwo));
+const doubledSorted = block('stream_terminal', field('OP', 'toList') + value('STREAM', doubled));
+const printlnRef = block('method_reference', field('TARGET', 'System.out') + field('METHOD', 'println'));
+const removeBig = block('lambda_block', field('PARAMS', 'n') + statement('BODY',
+    block('controls_return', value('VALUE', block('logic_compare', field('OP', 'GT') + value('A', varGet('n')) + value('B', num(5)))))));
+
 const programs: { name: string; xml: string }[] = [
     {
         name: 'switch with explicit break and default',
@@ -233,6 +244,97 @@ const programs: { name: string; xml: string }[] = [
                 declareInit('boolean', 'ok', block('input_read_boolean')),
             ),
         ),
+    },
+
+    {
+        name: 'modern switch, labels, assert, bitwise ops, var and pattern matching',
+        xml: xml(seq(
+            declareInit('int', 'dia', num(2)),
+            block('switch_arrow', value('EXPR', varGet('dia')) + statement('CASES',
+                block('case_arrow', value('CASE', num(1)) + statement('DO', print(text('lunes')))),
+                block('default_arrow', statement('DO', print(text('otro')))))),
+            block('variable_declaration_init', value('TYPE', block('type_var')) + field('VAR', 'nombre') +
+                value('VALUE', block('switch_expression', value('EXPR', varGet('dia')) + statement('CASES',
+                    block('case_value', value('CASE', num(1)) + value('RESULT', text('lunes'))),
+                    block('case_value', value('CASE', num(2)) + value('RESULT', text('martes'))))))),
+            block('controls_labeled', field('LABEL', 'externo') + statement('DO',
+                block('controls_for_classic', field('VAR', 'i') + value('FROM', num(0)) + field('OP', 'LT') + value('TO', num(3)) + field('STEP', '++') +
+                    statement('DO', block('controls_for_classic', field('VAR', 'j') + value('FROM', num(0)) + field('OP', 'LT') + value('TO', num(3)) + field('STEP', '++') +
+                        statement('DO', block('controls_jump_label', field('JUMP', 'break') + field('LABEL', 'externo')))))))),
+            block('assert_block', value('CONDITION', block('logic_compare', field('OP', 'GT') + value('A', varGet('dia')) + value('B', num(0)))) +
+                value('MESSAGE', text('día positivo'))),
+            print(block('math_bitwise', field('OP', '<<') + value('A', num(1)) + value('B', num(3)))),
+            print(block('math_bitwise_not', value('NUM', num(5)))),
+            block('variable_declaration_init', value('TYPE', customType('Object')) + field('VAR', 'o') + value('VALUE', varGet('nombre'))),
+            block('controls_if', value('IF0', block('logic_instanceof_pattern', value('VALUE', varGet('o')) + field('CLASS', 'String') + field('VAR', 's'))) +
+                statement('DO0', print(block('text_length', value('TEXT', varGet('s')))))),
+            print(block('text_block', field('TEXT', 'Hola "mundo"\\nadiós'))),
+        )),
+    },
+    {
+        name: 'records, generic and inner classes, anonymous classes, varargs',
+        xml: xml(
+            block('record_definition', field('NAME', 'Punto') + field('COMPONENTS', 'int x, int y')),
+            block('class_definition', field('NAME', 'Caja<T>') +
+                statement('ATTRIBUTES', block('variable_declaration', value('TYPE', customType('T')) + field('VAR', 'valor'))) +
+                statement('METHODS',
+                    block('constructor_definition', statement('PARAMS', block('function_parameter', value('TYPE', customType('T')) + field('NAME', 'valor'))) +
+                        statement('BODY', block('field_set', value('OBJECT', block('this_reference')) + field('FIELD', 'valor') + value('VALUE', varGet('valor'))))),
+                    block('class_definition', field('NAME', 'Interna')))),
+            block('function_definition', value('RETURN_TYPE', typeBlock('int')) + field('NAME', 'sumar') +
+                statement('PARAMS', block('function_parameter', value('TYPE', customType('int...')) + field('NAME', 'nums'))) +
+                statement('BODY',
+                    declareInit('int', 't', num(0)),
+                    block('controls_for_each', field('TYPE', 'int') + field('VAR', 'n') + value('COLLECTION', varGet('nums')) +
+                        statement('DO', block('variable_compound', field('VAR', 't') + field('OP', '+=') + value('VALUE', varGet('n'))))),
+                    block('controls_return', value('VALUE', varGet('t'))))),
+            seq(
+                block('variable_declaration_init', value('TYPE', customType('Punto')) + field('VAR', 'p') +
+                    value('VALUE', block('object_instantiation', field('CLASS', 'Punto') + args(num(1), num(2))))),
+                print(block('method_call_value', value('OBJECT', varGet('p')) + field('METHOD', 'x') + args())),
+                block('variable_declaration_init', value('TYPE', customType('Caja<String>')) + field('VAR', 'c') +
+                    value('VALUE', block('object_instantiation', field('CLASS', 'Caja<>') + args(text('hola'))))),
+                print(block('function_call_value', field('NAME', 'sumar') + args(num(1), num(2), num(3)))),
+                block('variable_declaration_init', value('TYPE', customType('Runnable')) + field('VAR', 'r') +
+                    value('VALUE', block('anonymous_class', field('CLASS', 'Runnable') + statement('METHODS',
+                        block('method_override', field('MODIFIER', 'public') + field('RETURN_TYPE', 'void') + field('NAME', 'run') +
+                            statement('BODY', print(text('corriendo')))))))),
+                block('method_call', value('OBJECT', varGet('r')) + field('METHOD', 'run') + args()),
+            ),
+        ),
+    },
+    {
+        name: 'streams, lambdas, method references and Optional',
+        xml: xml(seq(
+            block('list_declaration', field('ELEMENT_TYPE', 'Integer') + field('NAME', 'nums')),
+            block('list_add', field('LIST', 'nums') + value('VALUE', num(4))),
+            block('list_add', field('LIST', 'nums') + value('VALUE', num(7))),
+            block('variable_declaration_init', value('TYPE', block('type_var')) + field('VAR', 'dobles') + value('VALUE', doubledSorted)),
+            print(terminal('sum')),
+            print(terminal('max')),
+            print(terminal('count')),
+            block('stream_for_each', value('STREAM', varGet('dobles')) + value('ARG', printlnRef)),
+            block('collection_do', field('NAME', 'nums') + field('METHOD', 'removeIf') + value('VALUE', removeBig)),
+            block('variable_declaration_init', value('TYPE', customType('java.util.Optional<String>')) + field('VAR', 'op') +
+                value('VALUE', block('optional_create', field('HOW', 'ofNullable') + value('VALUE', block('logic_null'))))),
+            print(block('optional_value', value('OPTIONAL', varGet('op')) + field('METHOD', 'orElse') + value('ARG', text('nada')))),
+        )),
+    },
+    {
+        name: 'dates and modern concurrency',
+        xml: xml(seq(
+            block('variable_declaration_init', value('TYPE', block('type_var')) + field('VAR', 'hoy') + value('VALUE', block('date_now', field('CLASS', 'LocalDate')))),
+            print(block('method_call_value', value('OBJECT', block('date_of', value('YEAR', num(2026)) + value('MONTH', num(10)) + value('DAY', num(20)))) +
+                field('METHOD', 'plusDays') + args(num(3)))),
+            block('atomic_declaration', field('NAME', 'contador') + value('VALUE', num(0))),
+            block('executor_create', field('NAME', 'executor') + value('THREADS', num(2))),
+            block('executor_submit', field('NAME', 'executor') + statement('BODY',
+                block('method_call', value('OBJECT', varGet('contador')) + field('METHOD', 'incrementAndGet') + args()))),
+            block('executor_shutdown', field('NAME', 'executor')),
+            block('thread_create', field('NAME', 'hilo') + statement('BODY', print(text('hola')))),
+            block('thread_join', field('NAME', 'hilo')),
+            print(block('method_call_value', value('OBJECT', varGet('contador')) + field('METHOD', 'get') + args())),
+        )),
     },
 ];
 

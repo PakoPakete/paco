@@ -60,7 +60,12 @@ export type IRNode =
   | IRArray2DDeclaration
   | IRArray2DAssignment
   | IRCollectionDeclaration
-  | IRExprStatement;
+  | IRExprStatement
+  | IRLabeled
+  | IRJumpLabel
+  | IRAssert
+  | IRSwitchArrow
+  | IRRecordDefinition;
 
 export type IRExpr =
   | IRNumber
@@ -98,7 +103,12 @@ export type IRExpr =
   | IRStaticCall
   | IRConstant
   | IRArray2DAccess
-  | IRInstanceOf;
+  | IRInstanceOf
+  | IRLambdaBlock
+  | IRMethodRef
+  | IRSwitchExpr
+  | IRTextBlock
+  | IRAnonymousClass;
 
 export interface IRComment {
   kind: 'comment';
@@ -195,6 +205,7 @@ export interface IRClassDefinition {
   implementsInterfaces?: string[];
   accessModifier?: string;
   isAbstract?: boolean;
+  innerClasses?: IRClassDefinition[];
 }
 
 export interface IRAttribute extends IRVarDeclaration {}
@@ -714,10 +725,79 @@ export interface IRInstanceOf {
   kind: 'instance_of';
   expr: IRExpr;
   className: string;
+  /** Pattern matching: `x instanceof Perro p`. */
+  bindName?: string;
 }
 
 /** An expression used as a statement, e.g. Collections.sort(lista); */
 export interface IRExprStatement {
   kind: 'expr_statement';
   expr: IRExpr;
+}
+
+/** A loop with a label, so break/continue can leave an outer loop. */
+export interface IRLabeled {
+  kind: 'labeled';
+  label: string;
+  body: IRNode[];
+}
+
+export interface IRJumpLabel {
+  kind: 'jump_label';
+  jump: 'break' | 'continue';
+  label: string;
+}
+
+export interface IRAssert {
+  kind: 'assert';
+  condition: IRExpr;
+  message?: IRExpr;
+}
+
+export interface IRArrowCase {
+  /** Undefined is the default branch. */
+  value?: IRExpr;
+  body: IRNode[];
+}
+
+export interface IRSwitchArrow {
+  kind: 'switch_arrow';
+  expr: IRExpr;
+  cases: IRArrowCase[];
+}
+
+export interface IRSwitchExpr {
+  kind: 'switch_expr';
+  expr: IRExpr;
+  cases: { value?: IRExpr; result: IRExpr }[];
+}
+
+export interface IRRecordDefinition {
+  kind: 'record_definition';
+  name: string;
+  components: IRParameter[];
+}
+
+export interface IRLambdaBlock {
+  kind: 'lambda_block';
+  params: string[];
+  body: IRNode[];
+}
+
+/** Clase::metodo or objeto::metodo. */
+export interface IRMethodRef {
+  kind: 'method_ref';
+  target: string;
+  method: string;
+}
+
+export interface IRTextBlock {
+  kind: 'text_block';
+  lines: string[];
+}
+
+export interface IRAnonymousClass {
+  kind: 'anonymous_class';
+  className: string;
+  methods: IRFunctionDefinition[];
 }

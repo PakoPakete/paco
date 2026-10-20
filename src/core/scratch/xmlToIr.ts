@@ -81,6 +81,7 @@ import {
   IRWebService,
   IRCatch,
   IRSuperCall,
+  IRArrowCase,
 } from '../ir/nodes';
 
 // Numbers each "ejecutar en paralelo" block so two of them do not declare t1/t2 twice.
@@ -1165,7 +1166,7 @@ function parseClassDefinition(block: Element): IRClassDefinition {
   const attributes = attrStmt ? parseAttributes(attrStmt) : [];
   const methodsStmt = findStatement(block, 'METHODS');
   const methods = methodsStmt ? parseMethods(methodsStmt) : [];
-  return { kind: 'class_definition', name, attributes, methods, isAbstract: isChecked(block, 'ABSTRACT') };
+  return { kind: 'class_definition', name, attributes, methods, isAbstract: isChecked(block, 'ABSTRACT'), innerClasses: methodsStmt ? parseInnerClasses(methodsStmt) : [] };
 }
 
 function parseClassExtends(block: Element): IRClassDefinition {
@@ -1177,7 +1178,7 @@ function parseClassExtends(block: Element): IRClassDefinition {
   const attributes = attrStmt ? parseAttributes(attrStmt) : [];
   const methodsStmt = findStatement(block, 'METHODS');
   const methods = methodsStmt ? parseMethods(methodsStmt) : [];
-  return { kind: 'class_definition', name, attributes, methods, extendsClass, isAbstract: isChecked(block, 'ABSTRACT') };
+  return { kind: 'class_definition', name, attributes, methods, extendsClass, isAbstract: isChecked(block, 'ABSTRACT'), innerClasses: methodsStmt ? parseInnerClasses(methodsStmt) : [] };
 }
 
 function parseClassImplements(block: Element): IRClassDefinition {
@@ -1189,7 +1190,7 @@ function parseClassImplements(block: Element): IRClassDefinition {
   const attributes = attrStmt ? parseAttributes(attrStmt) : [];
   const methodsStmt = findStatement(block, 'METHODS');
   const methods = methodsStmt ? parseMethods(methodsStmt) : [];
-  return { kind: 'class_definition', name, attributes, methods, implementsInterfaces: iface.split(',').map(i => i.trim()).filter(i => i.length > 0), isAbstract: isChecked(block, 'ABSTRACT') };
+  return { kind: 'class_definition', name, attributes, methods, implementsInterfaces: iface.split(',').map(i => i.trim()).filter(i => i.length > 0), isAbstract: isChecked(block, 'ABSTRACT'), innerClasses: methodsStmt ? parseInnerClasses(methodsStmt) : [] };
 }
 
 function parseInterfaceDefinition(block: Element): IRInterfaceDefinition {
@@ -1598,11 +1599,14 @@ const CONVERSIONS = [
   'Character.toUpperCase', 'Character.toLowerCase', 'Character.getNumericValue',
 ];
 const COLLECTION_TYPES = ['ArrayList', 'LinkedList', 'HashSet', 'TreeSet', 'Stack', 'ArrayDeque'];
-const COLLECTION_DO_ARG = ['add', 'remove', 'push', 'offer', 'addFirst', 'addLast'];
+const COLLECTION_DO_ARG = ['add', 'remove', 'push', 'offer', 'addFirst', 'addLast', 'sort', 'forEach', 'removeIf'];
 const COLLECTION_DO_NO_ARG = ['clear', 'pop', 'poll', 'removeFirst', 'removeLast'];
 const COLLECTION_VALUE_NO_ARG = ['size', 'isEmpty', 'peek', 'pop', 'poll', 'getFirst', 'getLast', 'first', 'last', 'keySet', 'values'];
 const COLLECTION_VALUE_ARG = ['contains', 'indexOf', 'get', 'containsKey', 'containsValue'];
 const UTIL_STATEMENTS = ['Collections.sort', 'Collections.reverse', 'Collections.shuffle', 'Arrays.sort'];
+const BITWISE_OPS = ['&', '|', '^', '<<', '>>', '>>>'];
+const STREAM_OPS = ['filter', 'map', 'sorted', 'distinct', 'limit', 'skip'];
+const STREAM_TERMINALS = ['toList', 'count', 'sum', 'average', 'max', 'min', 'anyMatch', 'allMatch', 'noneMatch'];
 const UTIL_VALUES = ['Arrays.toString', 'Arrays.deepToString', 'Collections.max', 'Collections.min'];
 
 function fieldText(block: Element, name: string, fallback: string): string {
@@ -1734,6 +1738,59 @@ function parseExtraStatement(block: Element, type: string): IRNode[] {
         expr: { kind: 'static_call', callee: 'java.util.' + choice(block, 'FUNC', UTIL_STATEMENTS), args: [{ kind: 'var_ref', name: fieldText(block, 'NAME', 'lista') } as IRVarRef] },
       }];
 
+    case 'controls_labeled':
+      return [{ kind: 'labeled', label: fieldText(block, 'LABEL', 'externo'), body: statementOf(block, 'DO') }];
+
+    case 'controls_jump_label':
+      return [{ kind: 'jump_label', jump: choice(block, 'JUMP', ['break', 'continue']) as 'break' | 'continue', label: fieldText(block, 'LABEL', 'externo') }];
+
+    case 'assert_block': {
+      const msg = findValue(block, 'MESSAGE');
+      return [{ kind: 'assert', condition: valueOr(block, 'CONDITION', booleanLiteral(true)), message: msg ? parseExprFromValue(msg) : undefined }];
+    }
+
+    case 'switch_arrow':
+      return [{ kind: 'switch_arrow', expr: valueOr(block, 'EXPR', numberLiteral(0)), cases: parseArrowCases(block) }];
+
+    case 'record_definition':
+      return [{
+        kind: 'record_definition',
+        name: fieldText(block, 'NAME', 'Persona'),
+        components: fieldText(block, 'COMPONENTS', '').split(',').map(c => c.trim()).filter(c => c.length > 0).map(c => {
+          const space = c.lastIndexOf(' ');
+          return space > 0 ? { type: typeName(c.slice(0, space)), name: c.slice(space + 1) } : { type: 'Object', name: c };
+        }),
+      }];
+
+    case 'stream_for_each':
+      return [{ kind: 'method_call', target: valueOr(block, 'STREAM', { kind: 'var_ref', name: 'lista' }), method: 'forEach', args: [valueOr(block, 'ARG', { kind: 'method_ref', target: 'System.out', method: 'println' })] }];
+
+    case 'executor_create':
+      return [{
+        kind: 'var_declaration_init', type: 'java.util.concurrent.ExecutorService', name: fieldText(block, 'NAME', 'executor'),
+        value: { kind: 'static_call', callee: 'java.util.concurrent.Executors.newFixedThreadPool', args: [valueOr(block, 'THREADS', numberLiteral(2))] },
+      }];
+
+    case 'executor_submit':
+      return [{ kind: 'method_call', target: { kind: 'var_ref', name: fieldText(block, 'NAME', 'executor') }, method: 'submit', args: [{ kind: 'lambda_block', params: [], body: statementOf(block, 'BODY') }] }];
+
+    case 'executor_shutdown': {
+      const executor: IRVarRef = { kind: 'var_ref', name: fieldText(block, 'NAME', 'executor') };
+      return [
+        { kind: 'method_call', target: executor, method: 'shutdown', args: [] },
+        { kind: 'method_call', target: executor, method: 'awaitTermination', args: [numberLiteral(1), { kind: 'constant', code: 'java.util.concurrent.TimeUnit.MINUTES' }] },
+      ];
+    }
+
+    case 'thread_join':
+      return [{ kind: 'method_call', target: { kind: 'var_ref', name: fieldText(block, 'NAME', 'miHilo') }, method: 'join', args: [] }];
+
+    case 'atomic_declaration':
+      return [{
+        kind: 'var_declaration_init', type: 'java.util.concurrent.atomic.AtomicInteger', name: fieldText(block, 'NAME', 'contador'),
+        value: { kind: 'new_object', className: 'java.util.concurrent.atomic.AtomicInteger', args: [valueOr(block, 'VALUE', numberLiteral(0))] },
+      }];
+
     case 'try_multi_catch':
       return [{
         kind: 'try_catch_finally',
@@ -1841,6 +1898,79 @@ function parseExtraExpr(block: Element, type: string | null): IRExpr | null {
     case 'logic_instanceof':
       return { kind: 'instance_of', expr: valueOr(block, 'VALUE', { kind: 'null' }), className: typeName(fieldText(block, 'CLASS', 'MiClase')) };
 
+    case 'logic_instanceof_pattern':
+      return {
+        kind: 'instance_of', expr: valueOr(block, 'VALUE', { kind: 'null' }),
+        className: typeName(fieldText(block, 'CLASS', 'MiClase')), bindName: fieldText(block, 'VAR', 'p'),
+      };
+
+    case 'type_var':
+      return stringLiteral('var');
+
+    case 'lambda_block':
+      return { kind: 'lambda_block', params: splitNames(fieldText(block, 'PARAMS', 'x')), body: statementOf(block, 'BODY') };
+
+    case 'method_reference':
+      return { kind: 'method_ref', target: fieldText(block, 'TARGET', 'System.out'), method: fieldText(block, 'METHOD', 'println') };
+
+    case 'switch_expression':
+      return { kind: 'switch_expr', expr: valueOr(block, 'EXPR', numberLiteral(0)), cases: parseValueCases(block) };
+
+    case 'text_block':
+      return { kind: 'text_block', lines: fieldText(block, 'TEXT', '').split('\\n') };
+
+    case 'anonymous_class': {
+      const methodsStmt = findStatement(block, 'METHODS');
+      return { kind: 'anonymous_class', className: typeName(fieldText(block, 'CLASS', 'Runnable')), methods: methodsStmt ? parseMethods(methodsStmt) : [] };
+    }
+
+    case 'math_bitwise':
+      return { kind: 'binary_op', op: choice(block, 'OP', BITWISE_OPS), left: valueOr(block, 'A', numberLiteral(0)), right: valueOr(block, 'B', numberLiteral(0)) };
+
+    case 'math_bitwise_not':
+      return { kind: 'unary_op', op: '~', expr: valueOr(block, 'NUM', numberLiteral(0)) };
+
+    case 'stream_start':
+      return { kind: 'method_call_expr', target: { kind: 'var_ref', name: fieldText(block, 'NAME', 'lista') }, method: 'stream', args: [] };
+
+    case 'stream_op': {
+      const op = choice(block, 'OP', STREAM_OPS);
+      const needsArg = !['sorted', 'distinct'].includes(op);
+      return { kind: 'method_call_expr', target: valueOr(block, 'STREAM', { kind: 'var_ref', name: 'lista' }), method: op, args: needsArg ? [valueOr(block, 'ARG', numberLiteral(0))] : [] };
+    }
+
+    case 'stream_terminal': {
+      const stream = valueOr(block, 'STREAM', { kind: 'var_ref', name: 'lista' });
+      const op = choice(block, 'OP', STREAM_TERMINALS);
+      if (op === 'toList') {
+        return { kind: 'method_call_expr', target: stream, method: 'collect', args: [{ kind: 'static_call', callee: 'java.util.stream.Collectors.toList', args: [] }] };
+      }
+      if (op === 'sum' || op === 'average' || op === 'max' || op === 'min') {
+        // Numbers in a list are boxed (Integer), so unbox them before summing.
+        const asNumbers: IRExpr = { kind: 'method_call_expr', target: stream, method: 'mapToDouble', args: [{ kind: 'method_ref', target: 'Number', method: 'doubleValue' }] };
+        const result: IRExpr = { kind: 'method_call_expr', target: asNumbers, method: op, args: [] };
+        return op === 'sum' ? result : { kind: 'method_call_expr', target: result, method: 'orElse', args: [numberLiteral(0)] };
+      }
+      const args = op === 'count' ? [] : [valueOr(block, 'ARG', numberLiteral(0))];
+      return { kind: 'method_call_expr', target: stream, method: op, args };
+    }
+
+    case 'optional_create': {
+      const how = choice(block, 'HOW', ['ofNullable', 'of', 'empty']);
+      return { kind: 'static_call', callee: `java.util.Optional.${how}`, args: how === 'empty' ? [] : [valueOr(block, 'VALUE', { kind: 'null' })] };
+    }
+
+    case 'optional_value': {
+      const method = choice(block, 'METHOD', ['isPresent', 'isEmpty', 'get', 'orElse']);
+      return { kind: 'method_call_expr', target: valueOr(block, 'OPTIONAL', { kind: 'var_ref', name: 'opcional' }), method, args: method === 'orElse' ? [valueOr(block, 'ARG', numberLiteral(0))] : [] };
+    }
+
+    case 'date_now':
+      return { kind: 'static_call', callee: `java.time.${choice(block, 'CLASS', ['LocalDate', 'LocalDateTime', 'LocalTime'])}.now`, args: [] };
+
+    case 'date_of':
+      return { kind: 'static_call', callee: 'java.time.LocalDate.of', args: [valueOr(block, 'YEAR', numberLiteral(2026)), valueOr(block, 'MONTH', numberLiteral(1)), valueOr(block, 'DAY', numberLiteral(1))] };
+
     case 'array2d_access':
       return { kind: 'array2d_access', name: fieldText(block, 'VAR', 'matriz'), row: valueOr(block, 'ROW', numberLiteral(0)), col: valueOr(block, 'COL', numberLiteral(0)) };
 
@@ -1859,4 +1989,62 @@ function parseExtraExpr(block: Element, type: string | null): IRExpr | null {
     default:
       return null;
   }
+}
+
+function splitNames(text: string): string[] {
+  return text.split(',').map(p => p.trim()).filter(p => p.length > 0);
+}
+
+function firstBlockIn(stmt: Element | null): Element | null {
+  if (!stmt) {
+    return null;
+  }
+  for (let i = 0; i < stmt.childNodes.length; i++) {
+    const child = stmt.childNodes.item(i) as Element;
+    if (child && child.nodeType === 1 && child.tagName === 'block') {
+      return child;
+    }
+  }
+  return null;
+}
+
+function parseInnerClasses(stmt: Element): IRClassDefinition[] {
+  const classes: IRClassDefinition[] = [];
+  for (let current = firstBlockIn(stmt); current; current = getNextBlock(current)) {
+    const type = current.getAttribute('type');
+    if (type === 'class_definition') {
+      classes.push(parseClassDefinition(current));
+    } else if (type === 'class_extends') {
+      classes.push(parseClassExtends(current));
+    } else if (type === 'class_implements') {
+      classes.push(parseClassImplements(current));
+    }
+  }
+  return classes;
+}
+
+function parseArrowCases(block: Element): IRArrowCase[] {
+  const cases: IRArrowCase[] = [];
+  for (let current = firstBlockIn(findStatement(block, 'CASES')); current; current = getNextBlock(current)) {
+    const type = current.getAttribute('type');
+    if (type === 'case_arrow') {
+      cases.push({ value: valueOr(current, 'CASE', numberLiteral(0)), body: statementOf(current, 'DO') });
+    } else if (type === 'default_arrow') {
+      cases.push({ body: statementOf(current, 'DO') });
+    }
+  }
+  return cases;
+}
+
+function parseValueCases(block: Element): { value?: IRExpr; result: IRExpr }[] {
+  const cases: { value?: IRExpr; result: IRExpr }[] = [];
+  for (let current = firstBlockIn(findStatement(block, 'CASES')); current; current = getNextBlock(current)) {
+    const type = current.getAttribute('type');
+    if (type === 'case_value') {
+      cases.push({ value: valueOr(current, 'CASE', numberLiteral(0)), result: valueOr(current, 'RESULT', numberLiteral(0)) });
+    } else if (type === 'default_value') {
+      cases.push({ result: valueOr(current, 'RESULT', numberLiteral(0)) });
+    }
+  }
+  return cases;
 }

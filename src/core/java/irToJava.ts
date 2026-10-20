@@ -1,6 +1,8 @@
-import { IRNode, IRExpr, IRRepeat, IRIf, IRWhile, IRFor, IRForever, IRSwitch, IRPrint, IRVarAssign, IRVarChange, IRVarRef, IRUnaryOp, IRString, IRRandom, IRComment, IRVarDeclaration, IRVarDeclarationInit, IRVarIncrement, IRVarDecrement, IRArrayDeclaration, IRArrayAccess, IRArrayAssignment, IRArrayLength, IRFunctionDefinition, IRFunctionCall, IRReturn, IRClassDefinition, IRInterfaceDefinition, IRTextConcat, IRTextLength, IRTextSubstring, IRInputRead, IRTryCatchFinally, IRThrow, IRWaitSeconds, IRWaitUntil, IRStop, IRListDeclaration, IRListAdd, IRListRemove, IRListClear, IRListInsert, IRListSet, IRMapDeclaration, IRMapPut, IRMapRemove, IRMapGet, IRMapContainsKey, IREnumDefinition, IRThreadCreate, IRSynchronized, IRImport, IRCodeTemplate, IRBroadcast, IRBroadcastWait, IRWhenReceive, IRTernary, IRCharAt, IRTextContains, IRListGet, IRListSize, IRListContains, IRNewObject, IRLambda, IRStreamFilter, IRFunctionCallExpr, IRFileWrite, IREncryptDecrypt, IRDesktopApp, IRMobileApp, IRWebService, IRDoWhile, IRForEach, IRCompoundAssign, IRMethodCall, IRMethodCallExpr, IRFieldAccess, IRFieldAssign, IRPrintf, IRSuperCall, IRConstantDeclaration, IRArray2DDeclaration, IRArray2DAssignment, IRArray2DAccess, IRCollectionDeclaration, IRCharLiteral, IRStaticCall, IRConstant, IRInstanceOf, IRExprStatement } from '../ir/nodes';
+import { IRNode, IRExpr, IRRepeat, IRIf, IRWhile, IRFor, IRForever, IRSwitch, IRPrint, IRVarAssign, IRVarChange, IRVarRef, IRUnaryOp, IRString, IRRandom, IRComment, IRVarDeclaration, IRVarDeclarationInit, IRVarIncrement, IRVarDecrement, IRArrayDeclaration, IRArrayAccess, IRArrayAssignment, IRArrayLength, IRFunctionDefinition, IRFunctionCall, IRReturn, IRClassDefinition, IRInterfaceDefinition, IRTextConcat, IRTextLength, IRTextSubstring, IRInputRead, IRTryCatchFinally, IRThrow, IRWaitSeconds, IRWaitUntil, IRStop, IRListDeclaration, IRListAdd, IRListRemove, IRListClear, IRListInsert, IRListSet, IRMapDeclaration, IRMapPut, IRMapRemove, IRMapGet, IRMapContainsKey, IREnumDefinition, IRThreadCreate, IRSynchronized, IRImport, IRCodeTemplate, IRBroadcast, IRBroadcastWait, IRWhenReceive, IRTernary, IRCharAt, IRTextContains, IRListGet, IRListSize, IRListContains, IRNewObject, IRLambda, IRStreamFilter, IRFunctionCallExpr, IRFileWrite, IREncryptDecrypt, IRDesktopApp, IRMobileApp, IRWebService, IRDoWhile, IRForEach, IRCompoundAssign, IRMethodCall, IRMethodCallExpr, IRFieldAccess, IRFieldAssign, IRPrintf, IRSuperCall, IRConstantDeclaration, IRArray2DDeclaration, IRArray2DAssignment, IRArray2DAccess, IRCollectionDeclaration, IRCharLiteral, IRStaticCall, IRConstant, IRInstanceOf, IRExprStatement, IRLabeled, IRJumpLabel, IRAssert, IRSwitchArrow, IRSwitchExpr, IRRecordDefinition, IRLambdaBlock, IRMethodRef, IRTextBlock, IRAnonymousClass } from '../ir/nodes';
 
 type Ctx = { loopCounter: number; classLevel?: boolean };
+
+let lambdaCounter = 0;
 
 /**
  * classLevel: the nodes are members of PacoProgram (functions, classes, constants)
@@ -9,6 +11,7 @@ type Ctx = { loopCounter: number; classLevel?: boolean };
 export function irToJava(nodes: IRNode[], options: { classLevel?: boolean } = {}): string {
   const declared = new Set<string>();
   const ctx: Ctx = { loopCounter: 0, classLevel: options.classLevel };
+  lambdaCounter = 0;
   const body = emitNodes(nodes, declared, ctx);
   if (body.includes('scanner.')) {
     return 'java.util.Scanner scanner = new java.util.Scanner(System.in);\n' + body;
@@ -315,6 +318,42 @@ function emitNodes(nodes: IRNode[], declared: Set<string>, ctx: Ctx): string {
         break;
       }
 
+      case 'labeled': {
+        const lb = node as IRLabeled;
+        out += `${safeId(lb.label)}:\n${emitNodes(lb.body, declared, ctx)}`;
+        break;
+      }
+
+      case 'jump_label': {
+        const jl = node as IRJumpLabel;
+        out += `${jl.jump} ${safeId(jl.label)};\n`;
+        break;
+      }
+
+      case 'assert': {
+        const as = node as IRAssert;
+        const msg = as.message ? ` : ${emitExpr(as.message, declared)}` : '';
+        out += `assert ${emitBooleanExpr(as.condition, declared)}${msg};\n`;
+        break;
+      }
+
+      case 'switch_arrow': {
+        const sa = node as IRSwitchArrow;
+        let cases = '';
+        for (const c of sa.cases) {
+          const label = c.value ? `case ${emitExpr(c.value, declared)}` : 'default';
+          cases += `${label} -> {\n${indent(emitNodes(c.body, new Set(declared), ctx), 1)}}\n`;
+        }
+        out += `switch (${emitExpr(sa.expr, declared)}) {\n${indent(cases, 1)}}\n`;
+        break;
+      }
+
+      case 'record_definition': {
+        const rd = node as IRRecordDefinition;
+        out += `public record ${safeId(rd.name)}(${rd.components.map(c => `${c.type} ${safeId(c.name)}`).join(', ')}) {}\n`;
+        break;
+      }
+
       case 'expr_statement':
         out += `${emitExpr((node as IRExprStatement).expr, declared)};\n`;
         break;
@@ -472,8 +511,11 @@ function emitClassDefinition(node: IRClassDefinition, declared: Set<string>, ctx
     header += ` implements ${node.implementsInterfaces.join(', ')}`;
   }
   const attrCode = emitClassAttributes(node.attributes, declared, ctx);
-  const methodCode = node.methods.map(m => emitClassMethod(m, node.name, declared, ctx)).join('\n');
-  return `${header} {\n${indent(attrCode + methodCode, 1)}}\n`;
+  // A generic class Caja<T> has a constructor called just Caja.
+  const simpleName = node.name.replace(/<.*$/, '').trim();
+  const methodCode = node.methods.map(m => emitClassMethod(m, simpleName, declared, ctx)).join('\n');
+  const innerCode = (node.innerClasses ?? []).map(c => '\n' + emitClassDefinition(c, declared, ctx)).join('');
+  return `${header} {\n${indent(attrCode + methodCode + innerCode, 1)}}\n`;
 }
 
 function emitClassAttributes(attrs: IRVarDeclaration[], declared: Set<string>, ctx: Ctx): string {
@@ -753,7 +795,45 @@ function emitExpr(expr: IRExpr, declared: Set<string>): string {
 
     case 'instance_of': {
       const io = expr as IRInstanceOf;
-      return `(${emitTarget(io.expr, declared)} instanceof ${io.className})`;
+      const bind = io.bindName ? ` ${safeId(io.bindName)}` : '';
+      return `(${emitTarget(io.expr, declared)} instanceof ${io.className}${bind})`;
+    }
+
+    case 'lambda_block': {
+      const lb = expr as IRLambdaBlock;
+      const params = lb.params.length === 1 ? safeId(lb.params[0]) : `(${lb.params.map(safeId).join(', ')})`;
+      // Variables inside a lambda cannot shadow the method's own, so its loops get their own counter range.
+      const body = emitNodes(lb.body, new Set(declared), { loopCounter: 1000 * ++lambdaCounter });
+      return `${params} -> {\n${indent(body, 1)}}`;
+    }
+
+    case 'method_ref': {
+      const mr = expr as IRMethodRef;
+      return `${qualifiedName(mr.target)}::${mr.method === 'new' ? 'new' : safeId(mr.method)}`;
+    }
+
+    case 'switch_expr': {
+      const se = expr as IRSwitchExpr;
+      let cases = '';
+      for (const c of se.cases) {
+        const label = c.value ? `case ${emitExpr(c.value, declared)}` : 'default';
+        cases += `${label} -> ${emitExpr(c.result, declared)};\n`;
+      }
+      // A switch expression must cover every value.
+      if (!se.cases.some(c => c.value === undefined)) {
+        cases += 'default -> throw new IllegalStateException("valor no previsto");\n';
+      }
+      return `switch (${emitExpr(se.expr, declared)}) {\n${indent(cases, 1)}}`;
+    }
+
+    case 'text_block':
+      return emitTextBlock(expr as IRTextBlock);
+
+    case 'anonymous_class': {
+      const ac = expr as IRAnonymousClass;
+      const ctx: Ctx = { loopCounter: 1000 * ++lambdaCounter };
+      const methods = ac.methods.map(m => emitClassMethod(m, ac.className, declared, ctx)).join('\n');
+      return `new ${ac.className}() {\n${indent(methods, 1)}}`;
     }
 
     case 'array2d_access': {
@@ -858,4 +938,12 @@ function safeId(name: string): string {
     return 'var';
   }
   return /^\d/.test(cleaned) ? '_' + cleaned : cleaned;
+}
+
+/** Java 15 text block. Lines come from the "\n" the student typed. */
+function emitTextBlock(tb: IRTextBlock): string {
+  const q = '"'.repeat(3);
+  // Inside a text block single quotes need no escaping, but three in a row would close it.
+  const body = tb.lines.map(l => escapeJava(l, '\u0000').split(q).join('\\' + q)).join('\n');
+  return `${q}\n${body}${q}`;
 }

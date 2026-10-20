@@ -151,3 +151,48 @@ suite('New blocks', () => {
         ]);
     });
 });
+
+suite('Modern Java blocks', () => {
+    test('switch expression without default gets one that throws', () => {
+        const java = lines(toJava(declareInit('string', 'n', block('switch_expression', value('EXPR', varGet('d')) +
+            statement('CASES', block('case_value', value('CASE', num(1)) + value('RESULT', text('uno'))))))));
+        assert.deepStrictEqual(java, [
+            'String n = switch (d) {', 'case 1 -> "uno";',
+            'default -> throw new IllegalStateException("valor no previsto");', '};']);
+    });
+
+    test('arrow switch statement has no break', () => {
+        const java = toJava(block('switch_arrow', value('EXPR', varGet('d')) +
+            statement('CASES', block('case_arrow', value('CASE', num(1)) + statement('DO', print(num(1)))))));
+        assert.ok(java.includes('case 1 -> {') && !java.includes('break'));
+    });
+
+    test('records are members of PacoProgram', () => {
+        const java = xmlToJavaProgram(xml(block('record_definition', field('NAME', 'Punto') + field('COMPONENTS', 'int x, int y'))));
+        assert.ok(java.indexOf('public record Punto(int x, int y) {}') > java.indexOf('public static void main'));
+    });
+
+    test('generic class keeps its type parameter but not on the constructor', () => {
+        const java = lines(xmlToJavaProgram(xml(block('class_definition', field('NAME', 'Caja<T>') +
+            statement('METHODS', block('constructor_definition'))))));
+        assert.ok(java.includes('public static class Caja<T> {'));
+        assert.ok(java.includes('public Caja() {'));
+    });
+
+    test('text block keeps quotes and splits lines on \\n', () => {
+        assert.strictEqual(toJava(print(block('text_block', field('TEXT', 'a "b"\\nc')))),
+            'System.out.println("""\na "b"\nc""");\n');
+    });
+
+    test('stream sum unboxes the numbers', () => {
+        assert.strictEqual(
+            toJava(print(block('stream_terminal', field('OP', 'sum') + value('STREAM', block('stream_start', field('NAME', 'nums')))))),
+            'System.out.println(nums.stream().mapToDouble(Number::doubleValue).sum());\n');
+    });
+
+    test('labeled break and pattern matching instanceof', () => {
+        assert.strictEqual(toJava(block('controls_jump_label', field('JUMP', 'continue') + field('LABEL', 'fila'))), 'continue fila;\n');
+        assert.strictEqual(toJava(print(block('logic_instanceof_pattern', value('VALUE', varGet('o')) + field('CLASS', 'String') + field('VAR', 's')))),
+            'System.out.println((o instanceof String s));\n');
+    });
+});

@@ -21,7 +21,8 @@ export function block(type: string, inner: string = ''): string {
 }
 
 export function field(name: string, value: string): string {
-    return `<field name="${name}">${value}</field>`;
+    const escaped = value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `<field name="${name}">${escaped}</field>`;
 }
 
 export function value(name: string, expr: string): string {

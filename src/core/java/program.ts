@@ -19,7 +19,8 @@ export function xmlToJavaProgram(xml: string): string {
             node.kind === 'when_receive' ||
             // Java has no methods inside methods, so functions and constants become members of PacoProgram.
             node.kind === 'function_definition' ||
-            node.kind === 'constant_declaration'
+            node.kind === 'constant_declaration' ||
+            node.kind === 'record_definition'
         ) {
             outerBlocks.push(node);
         } else {

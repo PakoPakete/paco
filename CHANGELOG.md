@@ -24,6 +24,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Arrays 2D, `Arrays.sort`, `Arrays.toString`, `Collections.sort/reverse/shuffle/max/min`.
 - Colecciones: `LinkedList`, `HashSet`, `TreeSet`, `Stack`, `ArrayDeque` con sus operaciones, y `getOrDefault`/`keySet`/`values` en mapas.
 - Entrada: leer boolean, leer palabra y "¿hay un entero para leer?". Si una función lee del teclado, el `Scanner` pasa a ser un campo compartido.
+- Java moderno: `switch` con flechas y como expresión, `record`, `var`, text blocks, `instanceof` con variable, clases genéricas (`Caja<T>`), clases internas y anónimas, varargs (`int...`), lambdas con varias instrucciones, referencias a métodos (`System.out::println`), streams (`filter`, `map`, `sorted`, suma, media, máximo...), `Optional`, `LocalDate`, operadores de bits, `break`/`continue` con etiqueta, `assert`, `ExecutorService`, `join` y `AtomicInteger`.
 
 ---
 
