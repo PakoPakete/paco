@@ -933,14 +933,17 @@ function parseFor(block: Element): IRFor {
     value: fromValue ? parseExprFromValue(fromValue) : numberLiteral(0)
   };
 
+  const byExpr = byValue ? parseExprFromValue(byValue) : null;
+  // A negative literal step counts down, so the loop must run while var >= TO.
+  const countsDown = byExpr !== null && byExpr.kind === 'number' && byExpr.value < 0;
+
   const condition: IRBinaryOp = {
     kind: 'binary_op',
-    op: '<=',
+    op: countsDown ? '>=' : '<=',
     left: { kind: 'var_ref', name: varName },
     right: toValue ? parseExprFromValue(toValue) : numberLiteral(10)
   };
 
-  const byExpr = byValue ? parseExprFromValue(byValue) : null;
   const increment: IRVarIncrement | IRVarChange =
     byExpr && !(byExpr.kind === 'number' && byExpr.value === 1)
       ? { kind: 'var_change', name: varName, value: byExpr } as IRVarChange
