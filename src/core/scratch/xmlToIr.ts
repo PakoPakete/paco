@@ -79,9 +79,15 @@ import {
   IRDesktopApp,
   IRMobileApp,
   IRWebService,
+  IRCatch,
+  IRSuperCall,
 } from '../ir/nodes';
 
+// Numbers each "ejecutar en paralelo" block so two of them do not declare t1/t2 twice.
+let parallelCounter = 0;
+
 export function xmlToIr(xml: string): IRNode[] {
+  parallelCounter = 0;
   const doc = new DOMParser().parseFromString(xml, 'text/xml');
   const root = doc.documentElement;
 
@@ -255,6 +261,8 @@ function parseBlockSequence(firstBlock: Element | null): IRNode[] {
       }
       else if (type === 'variable_show') {
         result.push(parseVariableShow(current));
+      } else if (type) {
+        result.push(...parseExtraStatement(current, type));
       }
 
       current = getNextBlock(current);
@@ -428,6 +436,11 @@ function parseExprFromBlock(block: Element): IRExpr {
   if (type === 'type_string') { return stringLiteral('String'); }
   if (type === 'type_char') { return stringLiteral('char'); }
   if (type === 'type_void') { return stringLiteral('void'); }
+  if (type === 'type_long') { return stringLiteral('long'); }
+  if (type === 'type_float') { return stringLiteral('float'); }
+  if (type === 'type_short') { return stringLiteral('short'); }
+  if (type === 'type_byte') { return stringLiteral('byte'); }
+  if (type === 'type_custom') { return stringLiteral(typeName(fieldText(block, 'TYPE', 'MiClase'))); }
   if (type === 'modifier_public') { return stringLiteral('public'); }
   if (type === 'modifier_private') { return stringLiteral('private'); }
   if (type === 'modifier_protected') { return stringLiteral('protected'); }
@@ -732,9 +745,7 @@ function parseExprFromBlock(block: Element): IRExpr {
   if (type === 'object_instantiation') {
     const classField = findFieldByName(block, 'CLASS');
     const className = classField ? classField.textContent || 'MiClase' : 'MiClase';
-    const argsVal = findValue(block, 'ARGS');
-    const args: IRExpr[] = argsVal ? [parseExprFromValue(argsVal)] : [];
-    return { kind: 'new_object', className, args } as IRNewObject;
+    return { kind: 'new_object', className, args: parseArgs(block) } as IRNewObject;
   }
 
   if (type === 'this_reference') {
@@ -778,15 +789,13 @@ function parseExprFromBlock(block: Element): IRExpr {
     return { kind: 'array_access', name, index } as IRArrayAccess;
   }
 
-  if (type === 'function_call') {
+  if (type === 'function_call' || type === 'function_call_value') {
     const nameField = findFieldByName(block, 'NAME');
     const name = nameField ? nameField.textContent || 'func' : 'func';
-    const argsVal = findValue(block, 'ARGS');
-    const args: IRExpr[] = argsVal ? [parseExprFromValue(argsVal)] : [];
-    return { kind: 'function_call_expr', name, args } as IRFunctionCallExpr;
+    return { kind: 'function_call_expr', name, args: parseArgs(block) } as IRFunctionCallExpr;
   }
 
-  return numberLiteral(0);
+  return parseExtraExpr(block, type) ?? numberLiteral(0);
 }
 
 function getBlockOrShadowFromValue(valueNode: Element): Element | null {
@@ -906,9 +915,7 @@ function parseParameters(stmt: Element): any[] {
 function parseFunctionCall(block: Element): IRFunctionCall {
   const nameField = findFieldByName(block, 'NAME');
   const name = nameField ? nameField.textContent || 'func' : 'func';
-  const argsValue = findValue(block, 'ARGS');
-  const args: IRExpr[] = argsValue ? [parseExprFromValue(argsValue)] : []; 
-  return { kind: 'function_call', name, args };
+  return { kind: 'function_call', name, args: parseArgs(block) };
 }
 
 function parseReturn(block: Element): IRReturn {
@@ -1056,7 +1063,11 @@ function parseTryCatchFinally(block: Element): IRTryCatchFinally {
 
 function parseThrow(block: Element): IRThrow {
   const val = findValue(block, 'EXCEPTION') || firstValue(block);
-  const expr = val ? parseExprFromValue(val) : { kind: 'new_object', className: 'RuntimeException', args: [] } as IRNewObject;
+  let expr: IRExpr = val ? parseExprFromValue(val) : { kind: 'new_object', className: 'RuntimeException', args: [] } as IRNewObject;
+  // `throw "mensaje"` is not Java: wrap anything that is not an object in a RuntimeException.
+  if (expr.kind !== 'new_object' && expr.kind !== 'var_ref' && expr.kind !== 'method_call_expr' && expr.kind !== 'field_access') {
+    expr = { kind: 'new_object', className: 'RuntimeException', args: [expr] } as IRNewObject;
+  }
   return { kind: 'throw', expr };
 }
 
@@ -1154,7 +1165,7 @@ function parseClassDefinition(block: Element): IRClassDefinition {
   const attributes = attrStmt ? parseAttributes(attrStmt) : [];
   const methodsStmt = findStatement(block, 'METHODS');
   const methods = methodsStmt ? parseMethods(methodsStmt) : [];
-  return { kind: 'class_definition', name, attributes, methods };
+  return { kind: 'class_definition', name, attributes, methods, isAbstract: isChecked(block, 'ABSTRACT') };
 }
 
 function parseClassExtends(block: Element): IRClassDefinition {
@@ -1166,7 +1177,7 @@ function parseClassExtends(block: Element): IRClassDefinition {
   const attributes = attrStmt ? parseAttributes(attrStmt) : [];
   const methodsStmt = findStatement(block, 'METHODS');
   const methods = methodsStmt ? parseMethods(methodsStmt) : [];
-  return { kind: 'class_definition', name, attributes, methods, extendsClass };
+  return { kind: 'class_definition', name, attributes, methods, extendsClass, isAbstract: isChecked(block, 'ABSTRACT') };
 }
 
 function parseClassImplements(block: Element): IRClassDefinition {
@@ -1178,7 +1189,7 @@ function parseClassImplements(block: Element): IRClassDefinition {
   const attributes = attrStmt ? parseAttributes(attrStmt) : [];
   const methodsStmt = findStatement(block, 'METHODS');
   const methods = methodsStmt ? parseMethods(methodsStmt) : [];
-  return { kind: 'class_definition', name, attributes, methods, implementsInterfaces: [iface] };
+  return { kind: 'class_definition', name, attributes, methods, implementsInterfaces: iface.split(',').map(i => i.trim()).filter(i => i.length > 0), isAbstract: isChecked(block, 'ABSTRACT') };
 }
 
 function parseInterfaceDefinition(block: Element): IRInterfaceDefinition {
@@ -1220,14 +1231,26 @@ function parseAttributes(stmt: Element): IRVarDeclaration[] {
     if (child && child.nodeType === 1 && child.tagName === 'block') { current = child; break; }
   }
   while (current) {
-    if (current.getAttribute('type') === 'attribute_declaration') {
+    const type = current.getAttribute('type');
+    if (type === 'attribute_declaration') {
       const modField = findFieldByName(current, 'MODIFIER');
       const modifier = modField ? modField.textContent || 'private' : 'private';
       const typeField = findFieldByName(current, 'TYPE');
-      const type = typeField ? typeField.textContent || 'int' : 'int';
+      const attrType = typeField ? typeField.textContent || 'int' : 'int';
       const nameField = findFieldByName(current, 'NAME');
       const name = nameField ? nameField.textContent || 'attr' : 'attr';
-      attrs.push({ kind: 'var_declaration', type, name, accessModifier: modifier });
+      const valueNode = findValue(current, 'VALUE');
+      attrs.push({
+        kind: 'var_declaration', type: attrType, name, accessModifier: modifier,
+        isStatic: isChecked(current, 'STATIC'), isFinal: isChecked(current, 'FINAL'),
+        value: valueNode ? parseExprFromValue(valueNode) : undefined,
+      });
+    } else if (type === 'variable_declaration') {
+      // Lets attributes use any type block, including class types (type_custom).
+      attrs.push(parseVarDeclaration(current));
+    } else if (type === 'variable_declaration_init') {
+      const decl = parseVarDeclarationInit(current);
+      attrs.push({ kind: 'var_declaration', type: decl.type, name: decl.name, value: decl.value });
     }
     current = getNextBlock(current);
   }
@@ -1249,6 +1272,8 @@ function parseMethods(stmt: Element): IRFunctionDefinition[] {
       methods.push(parseConstructorDefinition(current));
     } else if (type === 'method_override') {
       methods.push(parseMethodOverride(current));
+    } else if (type === 'abstract_method') {
+      methods.push(parseAbstractMethod(current));
     }
     current = getNextBlock(current);
   }
@@ -1266,7 +1291,10 @@ function parseMethodDefinition(block: Element): IRFunctionDefinition {
   const params = paramsStmt ? parseParameters(paramsStmt) : [];
   const bodyStmt = findStatement(block, 'BODY');
   const body = bodyStmt ? parseStatementBody(bodyStmt) : [];
-  return { kind: 'function_definition', returnType, name, params, body, accessModifier: modifier, isStatic: false };
+  return {
+    kind: 'function_definition', returnType, name, params, body, accessModifier: modifier,
+    isStatic: isChecked(block, 'STATIC'), throwsTypes: fieldText(block, 'THROWS', '').trim() || undefined,
+  };
 }
 
 function parseConstructorDefinition(block: Element): IRFunctionDefinition {
@@ -1284,9 +1312,11 @@ function parseMethodOverride(block: Element): IRFunctionDefinition {
   const returnType = retField ? retField.textContent || 'void' : 'void';
   const nameField = findFieldByName(block, 'NAME');
   const name = nameField ? nameField.textContent || 'metodo' : 'metodo';
+  const paramsStmt = findStatement(block, 'PARAMS');
+  const params = paramsStmt ? parseParameters(paramsStmt) : [];
   const bodyStmt = findStatement(block, 'BODY');
   const body = bodyStmt ? parseStatementBody(bodyStmt) : [];
-  return { kind: 'function_definition', returnType, name, params: [], body, accessModifier: modifier, isOverride: true };
+  return { kind: 'function_definition', returnType, name, params, body, accessModifier: modifier, isOverride: true };
 }
 
 function parseVoidFunctionDefinition(block: Element): IRFunctionDefinition {
@@ -1343,9 +1373,11 @@ function parseParallelExec(block: Element): IRThreadCreate[] {
   const task2Stmt = findStatement(block, 'TASK2');
   const body1 = task1Stmt ? parseStatementBody(task1Stmt) : [];
   const body2 = task2Stmt ? parseStatementBody(task2Stmt) : [];
+  const n = ++parallelCounter;
+  const suffix = n === 1 ? '' : `_${n}`;
   return [
-    { kind: 'thread_create', name: 't1', body: body1 } as IRThreadCreate,
-    { kind: 'thread_create', name: 't2', body: body2 } as IRThreadCreate,
+    { kind: 'thread_create', name: `t1${suffix}`, body: body1 } as IRThreadCreate,
+    { kind: 'thread_create', name: `t2${suffix}`, body: body2 } as IRThreadCreate,
   ];
 }
 
@@ -1545,5 +1577,286 @@ function mapLogicOpToJava(token: string): string {
     case 'EQ':
     default:
       return '==';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Bloques añadidos en 0.5: bucles, objetos, texto, matemáticas y colecciones.
+// ---------------------------------------------------------------------------
+
+const COMPARE_OPS: Record<string, string> = { LT: '<', LTE: '<=', GT: '>', GTE: '>=' };
+const COMPOUND_OPS = ['+=', '-=', '*=', '/=', '%='];
+const CAST_TYPES = ['int', 'double', 'long', 'float', 'short', 'byte', 'char'];
+const MATH_ONE_ARG = ['Math.abs', 'Math.sqrt', 'Math.cbrt', 'Math.floor', 'Math.ceil', 'Math.log', 'Math.log10', 'Math.sin', 'Math.cos', 'Math.tan'];
+const MATH_TWO_ARGS = ['Math.max', 'Math.min', 'Math.pow', 'Math.hypot'];
+const CONSTANTS = ['Math.PI', 'Math.E', 'Integer.MAX_VALUE', 'Integer.MIN_VALUE', 'Double.MAX_VALUE', 'Long.MAX_VALUE'];
+const TEXT_METHODS_NO_ARG = ['toUpperCase', 'toLowerCase', 'trim', 'isEmpty', 'isBlank', 'strip'];
+const TEXT_METHODS_ONE_ARG = ['indexOf', 'lastIndexOf', 'startsWith', 'endsWith', 'equalsIgnoreCase', 'compareTo', 'split', 'repeat'];
+const CONVERSIONS = [
+  'Double.parseDouble', 'Long.parseLong', 'Boolean.parseBoolean', 'String.valueOf', 'Integer.toString',
+  'Character.isDigit', 'Character.isLetter', 'Character.isUpperCase', 'Character.isLowerCase',
+  'Character.toUpperCase', 'Character.toLowerCase', 'Character.getNumericValue',
+];
+const COLLECTION_TYPES = ['ArrayList', 'LinkedList', 'HashSet', 'TreeSet', 'Stack', 'ArrayDeque'];
+const COLLECTION_DO_ARG = ['add', 'remove', 'push', 'offer', 'addFirst', 'addLast'];
+const COLLECTION_DO_NO_ARG = ['clear', 'pop', 'poll', 'removeFirst', 'removeLast'];
+const COLLECTION_VALUE_NO_ARG = ['size', 'isEmpty', 'peek', 'pop', 'poll', 'getFirst', 'getLast', 'first', 'last', 'keySet', 'values'];
+const COLLECTION_VALUE_ARG = ['contains', 'indexOf', 'get', 'containsKey', 'containsValue'];
+const UTIL_STATEMENTS = ['Collections.sort', 'Collections.reverse', 'Collections.shuffle', 'Arrays.sort'];
+const UTIL_VALUES = ['Arrays.toString', 'Arrays.deepToString', 'Collections.max', 'Collections.min'];
+
+function fieldText(block: Element, name: string, fallback: string): string {
+  const f = findFieldByName(block, name);
+  return f && f.textContent !== null ? f.textContent : fallback;
+}
+
+/** Reads a dropdown and only accepts one of its known options, so XML cannot inject code. */
+function choice(block: Element, name: string, allowed: string[]): string {
+  const v = fieldText(block, name, allowed[0]);
+  return allowed.includes(v) ? v : allowed[0];
+}
+
+function isChecked(block: Element, name: string): boolean {
+  return fieldText(block, name, 'FALSE') === 'TRUE';
+}
+
+/** Keeps characters that can appear in a Java type such as Map<String, List<Integer>>[]. */
+function typeName(raw: string): string {
+  const cleaned = raw.replace(/[^\w<>,.\[\]? ]/g, '').trim();
+  return cleaned || 'Object';
+}
+
+function valueOr(block: Element, name: string, fallback: IRExpr): IRExpr {
+  const v = findValue(block, name);
+  return v ? parseExprFromValue(v) : fallback;
+}
+
+function statementOf(block: Element, name: string): IRNode[] {
+  const stmt = findStatement(block, name);
+  return stmt ? parseStatementBody(stmt) : [];
+}
+
+/**
+ * Arguments of call blocks: inputs ARG0..ARGn-1, with n from <mutation args="n">.
+ * Older workspaces used a single ARGS input.
+ */
+function parseArgs(block: Element): IRExpr[] {
+  const mutation = firstChildMutation(block);
+  const declared = mutation ? parseInt(mutation.getAttribute('args') || '', 10) : NaN;
+  if (!isNaN(declared)) {
+    const args: IRExpr[] = [];
+    for (let i = 0; i < declared; i++) {
+      args.push(valueOr(block, `ARG${i}`, numberLiteral(0)));
+    }
+    return args;
+  }
+  const legacy = findValue(block, 'ARGS');
+  return legacy ? [parseExprFromValue(legacy)] : [];
+}
+
+function parseExtraStatement(block: Element, type: string): IRNode[] {
+  switch (type) {
+    case 'controls_do_while':
+      return [{ kind: 'do_while', body: statementOf(block, 'DO'), condition: valueOr(block, 'BOOL', booleanLiteral(false)) }];
+
+    case 'controls_for_each':
+      return [{
+        kind: 'for_each',
+        elementType: typeName(fieldText(block, 'TYPE', 'int')),
+        name: fieldText(block, 'VAR', 'x'),
+        collection: valueOr(block, 'COLLECTION', { kind: 'var_ref', name: 'lista' } as IRVarRef),
+        body: statementOf(block, 'DO'),
+      }];
+
+    case 'controls_for_classic': {
+      const name = fieldText(block, 'VAR', 'i');
+      const cmp = COMPARE_OPS[fieldText(block, 'OP', 'LT')] ?? '<';
+      const step = choice(block, 'STEP', ['++', '--', '+=', '-=']);
+      const by = valueOr(block, 'BY', numberLiteral(1));
+      const increment: IRNode =
+        step === '++' ? { kind: 'var_increment', name } :
+        step === '--' ? { kind: 'var_decrement', name } :
+        { kind: 'compound_assign', name, op: step, value: by };
+      return [{
+        kind: 'for',
+        init: { kind: 'var_declaration_init', type: 'int', name, value: valueOr(block, 'FROM', numberLiteral(0)) },
+        condition: { kind: 'binary_op', op: cmp, left: { kind: 'var_ref', name }, right: valueOr(block, 'TO', numberLiteral(10)) },
+        increment,
+        body: statementOf(block, 'DO'),
+      }];
+    }
+
+    case 'variable_compound':
+      return [{ kind: 'compound_assign', name: fieldText(block, 'VAR', 'x'), op: choice(block, 'OP', COMPOUND_OPS), value: valueOr(block, 'VALUE', numberLiteral(1)) }];
+
+    case 'text_print_inline':
+      return [{ kind: 'print', value: valueOr(block, 'TEXT', stringLiteral('')), newline: false }];
+
+    case 'text_printf':
+      return [{ kind: 'printf', format: fieldText(block, 'FORMAT', '%d%n'), args: parseArgs(block) }];
+
+    case 'method_call':
+      return [{ kind: 'method_call', target: valueOr(block, 'OBJECT', { kind: 'this_ref' }), method: fieldText(block, 'METHOD', 'metodo'), args: parseArgs(block) }];
+
+    case 'field_set':
+      return [{ kind: 'field_assign', target: valueOr(block, 'OBJECT', { kind: 'this_ref' }), field: fieldText(block, 'FIELD', 'campo'), value: valueOr(block, 'VALUE', numberLiteral(0)) }];
+
+    case 'super_constructor_call':
+      return [{ kind: 'super_call', args: parseArgs(block) } as IRSuperCall];
+
+    case 'constant_declaration': {
+      const typeVal = findValue(block, 'TYPE');
+      const t = typeVal ? parseExprFromValue(typeVal) : stringLiteral('int');
+      return [{ kind: 'constant_declaration', type: (t as IRString).value, name: fieldText(block, 'NAME', 'MAXIMO'), value: valueOr(block, 'VALUE', numberLiteral(0)) }];
+    }
+
+    case 'array2d_declaration': {
+      const typeVal = findValue(block, 'TYPE');
+      const t = typeVal ? parseExprFromValue(typeVal) : stringLiteral('int');
+      return [{ kind: 'array2d_declaration', type: (t as IRString).value, name: fieldText(block, 'VAR', 'matriz'), rows: valueOr(block, 'ROWS', numberLiteral(3)), cols: valueOr(block, 'COLS', numberLiteral(3)) }];
+    }
+
+    case 'array2d_assignment':
+      return [{ kind: 'array2d_assignment', name: fieldText(block, 'VAR', 'matriz'), row: valueOr(block, 'ROW', numberLiteral(0)), col: valueOr(block, 'COL', numberLiteral(0)), value: valueOr(block, 'VALUE', numberLiteral(0)) }];
+
+    case 'collection_declaration':
+      return [{ kind: 'collection_declaration', collectionType: choice(block, 'COLLECTION', COLLECTION_TYPES), elementType: typeName(fieldText(block, 'ELEMENT_TYPE', 'Integer')), name: fieldText(block, 'NAME', 'coleccion') }];
+
+    case 'collection_do':
+      return [{ kind: 'method_call', target: { kind: 'var_ref', name: fieldText(block, 'NAME', 'coleccion') } as IRVarRef, method: choice(block, 'METHOD', COLLECTION_DO_ARG), args: [valueOr(block, 'VALUE', numberLiteral(0))] }];
+
+    case 'collection_do_no_arg':
+      return [{ kind: 'method_call', target: { kind: 'var_ref', name: fieldText(block, 'NAME', 'coleccion') } as IRVarRef, method: choice(block, 'METHOD', COLLECTION_DO_NO_ARG), args: [] }];
+
+    case 'collections_util':
+      return [{
+        kind: 'expr_statement',
+        expr: { kind: 'static_call', callee: 'java.util.' + choice(block, 'FUNC', UTIL_STATEMENTS), args: [{ kind: 'var_ref', name: fieldText(block, 'NAME', 'lista') } as IRVarRef] },
+      }];
+
+    case 'try_multi_catch':
+      return [{
+        kind: 'try_catch_finally',
+        tryBody: statementOf(block, 'TRY'),
+        catchType: 'Exception', catchVar: 'e', catchBody: [],
+        catches: parseCatches(block),
+        finallyBody: statementOf(block, 'FINALLY'),
+      }];
+
+    default:
+      return [];
+  }
+}
+
+function parseCatches(block: Element): IRCatch[] {
+  const catches: IRCatch[] = [];
+  const stmt = findStatement(block, 'CATCHES');
+  let current: Element | null = null;
+  if (stmt) {
+    for (let i = 0; i < stmt.childNodes.length; i++) {
+      const child = stmt.childNodes.item(i) as Element;
+      if (child && child.nodeType === 1 && child.tagName === 'block') { current = child; break; }
+    }
+  }
+  while (current) {
+    if (current.getAttribute('type') === 'catch_clause') {
+      catches.push({
+        // "A | B" is a multi-catch, so keep the bar.
+        type: fieldText(current, 'TYPE', 'Exception').split('|').map(t => typeName(t)).join(' | '),
+        varName: fieldText(current, 'VAR', 'e'),
+        body: statementOf(current, 'DO'),
+      });
+    }
+    current = getNextBlock(current);
+  }
+  if (catches.length === 0) {
+    catches.push({ type: 'Exception', varName: 'e', body: [] });
+  }
+  return catches;
+}
+
+function parseAbstractMethod(block: Element): IRFunctionDefinition {
+  const paramsStmt = findStatement(block, 'PARAMS');
+  return {
+    kind: 'function_definition',
+    returnType: fieldText(block, 'RETURN_TYPE', 'void'),
+    name: fieldText(block, 'NAME', 'metodo'),
+    params: paramsStmt ? parseParameters(paramsStmt) : [],
+    body: [],
+    accessModifier: choice(block, 'MODIFIER', ['public', 'protected']),
+    isAbstract: true,
+  };
+}
+
+function parseExtraExpr(block: Element, type: string | null): IRExpr | null {
+  switch (type) {
+    case 'logic_null':
+      return { kind: 'null' };
+
+    case 'char_literal':
+      return { kind: 'char', value: fieldText(block, 'CHAR', 'a').charAt(0) || ' ' };
+
+    case 'math_cast':
+      return { kind: 'unary_op', op: `(${choice(block, 'TYPE', CAST_TYPES)})`, expr: valueOr(block, 'VALUE', numberLiteral(0)) };
+
+    case 'math_function':
+      return { kind: 'static_call', callee: choice(block, 'FUNC', MATH_ONE_ARG), args: [valueOr(block, 'NUM', numberLiteral(0))] };
+
+    case 'math_two_args':
+      return { kind: 'static_call', callee: choice(block, 'FUNC', MATH_TWO_ARGS), args: [valueOr(block, 'A', numberLiteral(0)), valueOr(block, 'B', numberLiteral(0))] };
+
+    case 'math_constant_java':
+      return { kind: 'constant', code: choice(block, 'CONSTANT', CONSTANTS) };
+
+    case 'text_method':
+      return { kind: 'method_call_expr', target: valueOr(block, 'TEXT', stringLiteral('')), method: choice(block, 'METHOD', TEXT_METHODS_NO_ARG), args: [] };
+
+    case 'text_method_arg':
+      return { kind: 'method_call_expr', target: valueOr(block, 'TEXT', stringLiteral('')), method: choice(block, 'METHOD', TEXT_METHODS_ONE_ARG), args: [valueOr(block, 'ARG', stringLiteral(''))] };
+
+    case 'text_replace':
+      return { kind: 'method_call_expr', target: valueOr(block, 'TEXT', stringLiteral('')), method: 'replace', args: [valueOr(block, 'FROM', stringLiteral('')), valueOr(block, 'TO', stringLiteral(''))] };
+
+    case 'text_convert':
+      return { kind: 'static_call', callee: choice(block, 'FUNC', CONVERSIONS), args: [valueOr(block, 'VALUE', stringLiteral(''))] };
+
+    case 'input_read_boolean':
+      return { kind: 'input_read', type: 'boolean' };
+
+    case 'input_read_word':
+      return { kind: 'input_read', type: 'word' };
+
+    case 'input_has_next_int':
+      return { kind: 'input_read', type: 'hasNextInt' };
+
+    case 'method_call_value':
+      return { kind: 'method_call_expr', target: valueOr(block, 'OBJECT', { kind: 'this_ref' }), method: fieldText(block, 'METHOD', 'metodo'), args: parseArgs(block) };
+
+    case 'field_get':
+      return { kind: 'field_access', target: valueOr(block, 'OBJECT', { kind: 'this_ref' }), field: fieldText(block, 'FIELD', 'campo') };
+
+    case 'super_reference':
+      return { kind: 'super_ref' };
+
+    case 'logic_instanceof':
+      return { kind: 'instance_of', expr: valueOr(block, 'VALUE', { kind: 'null' }), className: typeName(fieldText(block, 'CLASS', 'MiClase')) };
+
+    case 'array2d_access':
+      return { kind: 'array2d_access', name: fieldText(block, 'VAR', 'matriz'), row: valueOr(block, 'ROW', numberLiteral(0)), col: valueOr(block, 'COL', numberLiteral(0)) };
+
+    case 'collection_value':
+      return { kind: 'method_call_expr', target: { kind: 'var_ref', name: fieldText(block, 'NAME', 'coleccion') }, method: choice(block, 'METHOD', COLLECTION_VALUE_NO_ARG), args: [] };
+
+    case 'collection_value_arg':
+      return { kind: 'method_call_expr', target: { kind: 'var_ref', name: fieldText(block, 'NAME', 'coleccion') }, method: choice(block, 'METHOD', COLLECTION_VALUE_ARG), args: [valueOr(block, 'VALUE', numberLiteral(0))] };
+
+    case 'map_get_or_default':
+      return { kind: 'method_call_expr', target: { kind: 'var_ref', name: fieldText(block, 'MAP', 'mapa') }, method: 'getOrDefault', args: [valueOr(block, 'KEY', stringLiteral('')), valueOr(block, 'DEFAULT', numberLiteral(0))] };
+
+    case 'util_value':
+      return { kind: 'static_call', callee: 'java.util.' + choice(block, 'FUNC', UTIL_VALUES), args: [{ kind: 'var_ref', name: fieldText(block, 'NAME', 'lista') }] };
+
+    default:
+      return null;
   }
 }

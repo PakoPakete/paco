@@ -16,7 +16,10 @@ export function xmlToJavaProgram(xml: string): string {
             node.kind === 'class_definition' ||
             node.kind === 'interface_definition' ||
             node.kind === 'enum_definition' ||
-            node.kind === 'when_receive'
+            node.kind === 'when_receive' ||
+            // Java has no methods inside methods, so functions and constants become members of PacoProgram.
+            node.kind === 'function_definition' ||
+            node.kind === 'constant_declaration'
         ) {
             outerBlocks.push(node);
         } else {
@@ -24,8 +27,16 @@ export function xmlToJavaProgram(xml: string): string {
         }
     }
 
-    const body = irToJava(mainBody);
-    const outerCode = irToJava(outerBlocks);
+    let body = irToJava(mainBody);
+    let outerCode = irToJava(outerBlocks, { classLevel: true });
+
+    // Functions outside main also read from the keyboard, so they need a shared Scanner field.
+    const scannerLine = 'java.util.Scanner scanner = new java.util.Scanner(System.in);\n';
+    if (outerCode.includes('scanner.')) {
+        outerCode = outerCode.replace(scannerLine, '');
+        body = body.replace(scannerLine, '');
+        outerCode = 'static ' + scannerLine + '\n' + outerCode;
+    }
 
     return wrapJava(body, imports, outerCode);
 }
@@ -38,7 +49,7 @@ function wrapJava(body: string, imports: string[] = [], outerCode: string = ''):
     }
 
     result += `public class PacoProgram {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
 ${indent(body, 2)}
     }
 `;
