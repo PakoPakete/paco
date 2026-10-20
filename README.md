@@ -23,6 +23,7 @@ PACO is a Visual Studio Code extension that converts visual Blockly-style blocks
 2. In the welcome panel that opens, click "Abrir Editor PACO".
 3. Two panels open: the block editor (left) and the generated Java code (right).
 4. Drag blocks from the toolbox and build your program.
+5. Press Ctrl+S to save the program as a `.paco` file. Opening a `.paco` file later brings the blocks back.
 
 You can also run "PACO: Open Visual Java Editor" from the command palette (Ctrl+Shift+P).
 
@@ -50,6 +51,7 @@ PACO (Programming Adapter for Code Overlay) es una extension de Visual Studio Co
 2. En el panel de bienvenida que se abre, haz clic en "Abrir Editor PACO".
 3. Se abren dos paneles: el editor de bloques (izquierda) y el codigo Java generado (derecha).
 4. Arrastra bloques desde el menu lateral y construye tu programa.
+5. Pulsa Ctrl+S para guardar el programa como archivo `.paco`. Al abrir un archivo `.paco` vuelven los bloques.
 
 Tambien puedes ejecutar "PACO: Abrir Editor Visual de Java" desde la paleta de comandos (Ctrl+Shift+P).
 

@@ -1440,25 +1440,82 @@ window.addEventListener('load', () => {
     readOnly: false
   });
 
+  // Los eventos de este grupo vienen de cargar un programa y no marcan el archivo como modificado
+  const LOAD_GROUP = 'paco-load';
+  let pendingSave = false;
+
+  function sendWorkspace(save) {
+    try {
+      const dom = Blockly.Xml.workspaceToDom(workspace);
+      const xmlText = Blockly.Xml.domToText(dom);
+      const pretty = Blockly.Xml.domToPrettyText(dom);
+
+      // Copia en el estado de la webview, por si se recrea al ocultar la pestaña
+      vscode.setState({ xml: xmlText });
+
+      vscode.postMessage({
+        type: 'TRANSLATE_JAVA',
+        payload: { xml: xmlText, pretty: pretty, save: save }
+      });
+    } catch (error) {
+      console.error('Error generating XML:', error);
+    }
+  }
+
+  function loadXml(xmlText) {
+    Blockly.Events.setGroup(LOAD_GROUP);
+    try {
+      if (xmlText && xmlText.trim()) {
+        Blockly.Xml.clearWorkspaceAndLoadFromXml(Blockly.utils.xml.textToDom(xmlText), workspace);
+      } else {
+        workspace.clear();
+      }
+    } catch (error) {
+      console.error('Error loading program:', error);
+    } finally {
+      Blockly.Events.setGroup(false);
+    }
+  }
+
   // Listener para cambios en tiempo real con debounce
-  workspace.addChangeListener(() => {
+  workspace.addChangeListener((event) => {
+    if (event.isUiEvent) {
+      return;
+    }
+    if (event.group !== LOAD_GROUP) {
+      pendingSave = true;
+    }
     if (translateTimeout) {
       clearTimeout(translateTimeout);
     }
     translateTimeout = setTimeout(() => {
-      try {
-        const dom = Blockly.Xml.workspaceToDom(workspace);
-        const xmlText = Blockly.Xml.domToText(dom);
-
-        vscode.postMessage({
-          type: 'TRANSLATE_JAVA',
-          payload: { xml: xmlText }
-        });
-      } catch (error) {
-        console.error('Error generating XML:', error);
-      }
+      const save = pendingSave;
+      pendingSave = false;
+      sendWorkspace(save);
     }, 300); // Esperar 300ms después del último cambio
   });
+
+  // La extensión envía el contenido del archivo .paco al abrirlo o cuando cambia fuera del editor
+  window.addEventListener('message', (event) => {
+    const message = event.data;
+    if (message && message.type === 'LOAD') {
+      const incoming = (message.payload && message.payload.xml) || '';
+      const current = Blockly.Xml.domToPrettyText(Blockly.Xml.workspaceToDom(workspace));
+      const isEmpty = !incoming.trim() && workspace.getAllBlocks(false).length === 0;
+      if (incoming !== current && !isEmpty) {
+        loadXml(incoming);
+      } else {
+        sendWorkspace(false);
+      }
+    }
+  });
+
+  // Restaurar lo último que había si la webview se recreó, y pedir el contenido del archivo
+  const previousState = vscode.getState();
+  if (previousState && previousState.xml) {
+    loadXml(previousState.xml);
+  }
+  vscode.postMessage({ type: 'READY' });
 
   // exportBtn.addEventListener('click', () => {
   //   const dom = Blockly.Xml.workspaceToDom(workspace);
