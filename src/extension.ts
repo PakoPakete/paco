@@ -6,6 +6,8 @@ import { irToJava } from './core/java/irToJava';
 
 const VIEW_TYPE = 'paco.blockEditor';
 let untitledCounter = 0;
+// Documentos Java de editores ya cerrados; al guardar un programa nuevo VS Code reabre su editor y se reutilizan
+const freeJavaDocs: vscode.TextDocument[] = [];
 
 export function activate(context: vscode.ExtensionContext) {
     vscode.window.registerTreeDataProvider('pacoView', {
@@ -23,8 +25,22 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Abre un programa nuevo sin guardar: Ctrl+S pedirá dónde guardar el .paco
     const disposable = vscode.commands.registerCommand('paco.openEditor', async () => {
-        untitledCounter++;
-        const uri = vscode.Uri.parse(`untitled:Programa${untitledCounter}.paco`);
+        // VS Code puede restaurar programas sin guardar de la sesión anterior: no reutilizar su nombre
+        const usedNames = new Set<string>();
+        for (const doc of vscode.workspace.textDocuments) {
+            usedNames.add(doc.uri.path.split('/').pop() ?? '');
+        }
+        for (const group of vscode.window.tabGroups.all) {
+            for (const tab of group.tabs) {
+                usedNames.add(tab.label);
+            }
+        }
+        let name: string;
+        do {
+            untitledCounter++;
+            name = `Programa${untitledCounter}.paco`;
+        } while (usedNames.has(name));
+        const uri = vscode.Uri.parse(`untitled:${name}`);
         await vscode.commands.executeCommand('vscode.openWith', uri, VIEW_TYPE, vscode.ViewColumn.One);
     });
 
@@ -52,10 +68,16 @@ class PacoEditorProvider implements vscode.CustomTextEditorProvider {
         html = html.replace(/{{root}}/g, panel.webview.asWebviewUri(mediaRoot).toString());
         panel.webview.html = html;
 
-        const javaDoc = await vscode.workspace.openTextDocument({
-            language: 'java',
-            content: '',
-        });
+        let javaDoc = freeJavaDocs.pop();
+        while (javaDoc && javaDoc.isClosed) {
+            javaDoc = freeJavaDocs.pop();
+        }
+        if (!javaDoc) {
+            javaDoc = await vscode.workspace.openTextDocument({
+                language: 'java',
+                content: '',
+            });
+        }
         vscode.window.showTextDocument(javaDoc, { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true });
 
         // Último texto escrito desde los bloques, para no recargar la webview con sus propios cambios
@@ -78,7 +100,12 @@ class PacoEditorProvider implements vscode.CustomTextEditorProvider {
             }
         });
 
-        panel.onDidDispose(() => changeSubscription.dispose());
+        panel.onDidDispose(() => {
+            changeSubscription.dispose();
+            if (!javaDoc.isClosed) {
+                freeJavaDocs.push(javaDoc);
+            }
+        });
 
         panel.webview.onDidReceiveMessage(async (message) => {
             if (message.type === 'READY') {
