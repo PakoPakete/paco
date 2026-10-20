@@ -1,4 +1,4 @@
-import { IRNode, IRImport, IRExpr, IRConstantDeclaration } from '../ir/nodes';
+import { IRNode, IRImport, IRPackage, IRExpr, IRConstantDeclaration } from '../ir/nodes';
 import { xmlToIr } from '../scratch/xmlToIr';
 import { irToJava } from './irToJava';
 
@@ -6,6 +6,7 @@ export function xmlToJavaProgram(xml: string): string {
     const irNodes = xmlToIr(xml);
 
     const imports: string[] = [];
+    let packageName: string | undefined;
     const outerBlocks: IRNode[] = [];
     const mainBody: IRNode[] = [];
     // A constant can only become a static field if its value does not read main's local variables.
@@ -14,6 +15,8 @@ export function xmlToJavaProgram(xml: string): string {
     for (const node of irNodes) {
         if (node.kind === 'import') {
             imports.push((node as IRImport).library);
+        } else if (node.kind === 'package') {
+            packageName = (node as IRPackage).name;
         } else if (
             node.kind === 'class_definition' ||
             node.kind === 'interface_definition' ||
@@ -44,7 +47,8 @@ export function xmlToJavaProgram(xml: string): string {
         outerCode = 'static ' + scannerLine + '\n' + outerCode;
     }
 
-    return wrapJava(body, imports, outerCode);
+    const program = wrapJava(body, imports, outerCode);
+    return packageName ? `package ${packageName};\n\n${program}` : program;
 }
 
 /** True when every variable the expression reads is one of the given names. */

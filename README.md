@@ -4,15 +4,15 @@
 
 Hecho por **Francisco Solano Žderić**.
 
-![Editor de bloques de PACO con el Java generado al lado](images/screenshots/editor.png)
+![Se colocan bloques, PACO escribe el Java al lado y el botón Ejecutar muestra la salida](images/screenshots/demo.gif)
 
 ## Qué hace
 
 - Editor de bloques basado en Blockly, integrado en VS Code y en español.
 - Java en tiempo real: cada cambio en los bloques actualiza el código Java de la derecha.
 - Botón **▶ Ejecutar**: compila y ejecuta el programa en un terminal, así que también puede leer del teclado.
-- Los programas se guardan como archivos `.paco`. Al abrir un `.paco` aparecen sus bloques, y `Ctrl+S` los guarda.
-- Cubre Java de un curso completo: control de flujo, variables y tipos, arrays, colecciones, funciones, clases, interfaces, herencia, excepciones, concurrencia, lambdas y streams, entrada y salida, y Java moderno (`record`, `switch` con flechas, `var`...).
+- Los programas se guardan como archivos `.paco`. Si tienes una carpeta abierta, cada programa nuevo se crea en ella como `ProgramaN.paco`; al abrir un `.paco` aparecen sus bloques, y `Ctrl+S` los guarda.
+- Cubre Java de un curso completo: control de flujo, variables y tipos, arrays, colecciones, funciones, clases, interfaces, herencia, excepciones, concurrencia, lambdas y streams, entrada y salida, y Java moderno (`record`, clases e interfaces `sealed`, `switch` con flechas, `var`...).
 - Si unos bloques no se pueden traducir, el editor lo avisa en vez de dejar el Java viejo sin decir nada.
 
 ## Cómo se usa
@@ -25,13 +25,13 @@ Hecho por **Francisco Solano Žderić**.
 ## Requisitos
 
 - Visual Studio Code 1.100 o superior.
-- Para ejecutar los programas, un JDK 11 o superior (por ejemplo [Eclipse Temurin](https://adoptium.net/)). Si PACO no encuentra Java, te ofrece descargarlo.
+- Para ejecutar los programas, un JDK 17 o superior (por ejemplo [Eclipse Temurin 21](https://adoptium.net/)). Si PACO no encuentra Java, te ofrece descargarlo.
 
 ---
 
 ## English
 
-PACO is a VS Code extension for learning Java with Scratch-style blocks. Every block you place is translated in real time into compilable Java, and the **▶ Ejecutar** (Run) button compiles and runs it in a terminal. Programs are saved as `.paco` files. Running programs requires JDK 11 or later. The interface is in Spanish.
+PACO is a VS Code extension for learning Java with Scratch-style blocks. Every block you place is translated in real time into compilable Java, and the **▶ Ejecutar** (Run) button compiles and runs it in a terminal. Programs are saved as `.paco` files. Running programs requires JDK 17 or later. The interface is in Spanish.
 
 ---
 

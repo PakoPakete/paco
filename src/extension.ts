@@ -7,11 +7,40 @@ import { execFile } from 'child_process';
 import { xmlToJavaProgram } from './core/java/program';
 
 const VIEW_TYPE = 'paco.blockEditor';
+const JAVA_SCHEME = 'paco-java';
 let untitledCounter = 0;
-// Documentos Java de editores ya cerrados; al guardar un programa nuevo VS Code reabre su editor y se reutilizan
-const freeJavaDocs: vscode.TextDocument[] = [];
+let javaCounter = 0;
+
+/**
+ * El Java generado se muestra como documento de solo lectura (paco-java:/Programa1/PacoProgram.java):
+ * VS Code no lo marca como modificado ni pregunta si guardarlo al cerrar, y la pestaña se llama PacoProgram.java.
+ */
+class GeneratedJava implements vscode.TextDocumentContentProvider {
+    private readonly contents = new Map<string, string>();
+    private readonly changed = new vscode.EventEmitter<vscode.Uri>();
+    readonly onDidChange = this.changed.event;
+
+    provideTextDocumentContent(uri: vscode.Uri): string {
+        return this.contents.get(uri.toString()) ?? '';
+    }
+
+    get(uri: vscode.Uri): string {
+        return this.contents.get(uri.toString()) ?? '';
+    }
+
+    set(uri: vscode.Uri, text: string): void {
+        if (this.contents.get(uri.toString()) !== text) {
+            this.contents.set(uri.toString(), text);
+            this.changed.fire(uri);
+        }
+    }
+}
+
+const generatedJava = new GeneratedJava();
+// Java de editores ya cerrados cuya pestaña sigue abierta; al guardar un programa nuevo VS Code reabre su editor y se reutilizan
+const freeJavaUris: vscode.Uri[] = [];
 // Java generado de cada editor abierto, para el comando "Ejecutar"
-const javaDocsByPanel = new Map<vscode.WebviewPanel, vscode.TextDocument>();
+const javaUrisByPanel = new Map<vscode.WebviewPanel, vscode.Uri>();
 let lastActivePanel: vscode.WebviewPanel | undefined;
 let output: vscode.OutputChannel;
 let runTerminal: vscode.Terminal | undefined;
@@ -26,6 +55,8 @@ export function activate(context: vscode.ExtensionContext) {
         getChildren: () => []
     });
 
+    context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(JAVA_SCHEME, generatedJava));
+
     context.subscriptions.push(
         vscode.window.registerCustomEditorProvider(
             VIEW_TYPE,
@@ -34,8 +65,11 @@ export function activate(context: vscode.ExtensionContext) {
         )
     );
 
-    // Abre un programa nuevo sin guardar: Ctrl+S pedirá dónde guardar el .paco
+    // Abre un programa nuevo. Con una carpeta abierta se crea ya como archivo ProgramaN.paco en ella;
+    // sin carpeta queda sin guardar y Ctrl+S pedirá dónde guardarlo. (VS Code muestra los programas
+    // sin guardar como "ProgramaN.paco.paco" en la pestaña, por eso se prefiere crear el archivo.)
     const disposable = vscode.commands.registerCommand('paco.openEditor', async () => {
+        const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
         // VS Code puede restaurar programas sin guardar de la sesión anterior: no reutilizar su nombre
         const usedNames = new Set<string>();
         for (const doc of vscode.workspace.textDocuments) {
@@ -50,21 +84,31 @@ export function activate(context: vscode.ExtensionContext) {
         do {
             untitledCounter++;
             name = `Programa${untitledCounter}.paco`;
-        } while (usedNames.has(name));
-        const uri = vscode.Uri.parse(`untitled:${name}`);
+        } while (usedNames.has(name) || (folder && await fileExists(vscode.Uri.joinPath(folder, name))));
+
+        let uri = vscode.Uri.parse(`untitled:${name}`);
+        if (folder) {
+            const fileUri = vscode.Uri.joinPath(folder, name);
+            try {
+                await vscode.workspace.fs.writeFile(fileUri, new Uint8Array());
+                uri = fileUri;
+            } catch {
+                // Carpeta de solo lectura: se queda como programa sin guardar
+            }
+        }
         await vscode.commands.executeCommand('vscode.openWith', uri, VIEW_TYPE, vscode.ViewColumn.One);
     });
 
     context.subscriptions.push(disposable);
 
     context.subscriptions.push(vscode.commands.registerCommand('paco.runJava', async () => {
-        const panel = [...javaDocsByPanel.keys()].find(p => p.active) ?? lastActivePanel;
-        const javaDoc = panel && javaDocsByPanel.get(panel);
-        if (!javaDoc) {
+        const panel = [...javaUrisByPanel.keys()].find(p => p.active) ?? lastActivePanel;
+        const javaUri = panel && javaUrisByPanel.get(panel);
+        if (!javaUri) {
             vscode.window.showWarningMessage('Abre un programa de PACO para ejecutarlo.');
             return;
         }
-        await runJava(javaDoc.getText());
+        await runJava(generatedJava.get(javaUri));
     }));
 
     context.subscriptions.push(vscode.window.onDidCloseTerminal(t => {
@@ -96,18 +140,21 @@ class PacoEditorProvider implements vscode.CustomTextEditorProvider {
         html = html.replace(/{{cspSource}}/g, panel.webview.cspSource);
         panel.webview.html = html;
 
-        let javaDoc = freeJavaDocs.pop();
-        while (javaDoc && javaDoc.isClosed) {
-            javaDoc = freeJavaDocs.pop();
+        let javaUri = freeJavaUris.pop();
+        while (javaUri && !isTabOpen(javaUri)) {
+            javaUri = freeJavaUris.pop();
         }
-        if (!javaDoc) {
-            javaDoc = await vscode.workspace.openTextDocument({
-                language: 'java',
-                content: '',
-            });
+        if (!javaUri) {
+            // La carpeta con el nombre del programa distingue las pestañas cuando hay varios abiertos
+            const programName = path.posix.basename(document.uri.path).replace(/\.paco$/i, '') || 'Programa';
+            javaUri = vscode.Uri.from({ scheme: JAVA_SCHEME, path: `/${programName}/PacoProgram.java`, query: String(++javaCounter) });
         }
-        vscode.window.showTextDocument(javaDoc, { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true });
-        javaDocsByPanel.set(panel, javaDoc);
+        const javaDoc = await vscode.workspace.openTextDocument(javaUri);
+        if (javaDoc.languageId !== 'java') {
+            await vscode.languages.setTextDocumentLanguage(javaDoc, 'java');
+        }
+        vscode.window.showTextDocument(javaDoc, { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true, preview: false });
+        javaUrisByPanel.set(panel, javaUri);
         lastActivePanel = panel;
         panel.onDidChangeViewState(e => {
             if (e.webviewPanel.active) {
@@ -137,12 +184,12 @@ class PacoEditorProvider implements vscode.CustomTextEditorProvider {
 
         panel.onDidDispose(() => {
             changeSubscription.dispose();
-            javaDocsByPanel.delete(panel);
+            javaUrisByPanel.delete(panel);
             if (lastActivePanel === panel) {
                 lastActivePanel = undefined;
             }
-            if (!javaDoc.isClosed) {
-                freeJavaDocs.push(javaDoc);
+            if (isTabOpen(javaUri)) {
+                freeJavaUris.push(javaUri);
             }
         });
 
@@ -152,7 +199,7 @@ class PacoEditorProvider implements vscode.CustomTextEditorProvider {
             }
 
             if (message.type === 'RUN') {
-                await runJava(javaDoc.getText());
+                await runJava(generatedJava.get(javaUri));
             }
 
             if (message.type === 'PROMPT') {
@@ -178,10 +225,7 @@ class PacoEditorProvider implements vscode.CustomTextEditorProvider {
                 }
 
                 try {
-                    const fullJava = xmlToJavaProgram(xml);
-                    const edit = new vscode.WorkspaceEdit();
-                    edit.replace(javaDoc.uri, fullRange(javaDoc), fullJava);
-                    await vscode.workspace.applyEdit(edit);
+                    generatedJava.set(javaUri, xmlToJavaProgram(xml));
                     panel.webview.postMessage({ type: 'TRANSLATE_OK' });
                 } catch (error) {
                     // El alumno tiene que saber que el Java de la derecha ya no corresponde a sus bloques
@@ -197,13 +241,27 @@ class PacoEditorProvider implements vscode.CustomTextEditorProvider {
     }
 }
 
+function isTabOpen(uri: vscode.Uri): boolean {
+    return vscode.window.tabGroups.all.some(group => group.tabs.some(tab =>
+        tab.input instanceof vscode.TabInputText && tab.input.uri.toString() === uri.toString()));
+}
+
+async function fileExists(uri: vscode.Uri): Promise<boolean> {
+    try {
+        await vscode.workspace.fs.stat(uri);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 function fullRange(doc: vscode.TextDocument): vscode.Range {
     return new vscode.Range(0, 0, doc.lineCount, 0);
 }
 
 /**
  * Guarda el Java en una carpeta temporal y lo ejecuta en un terminal, para que el
- * programa pueda leer del teclado. `java Archivo.java` compila y ejecuta en un paso (JDK 11+).
+ * programa pueda leer del teclado. `java Archivo.java` compila y ejecuta en un paso (JDK 11+; los bloques de Java moderno necesitan 17+).
  */
 async function runJava(code: string): Promise<void> {
     if (!code.trim()) {
@@ -216,7 +274,7 @@ async function runJava(code: string): Promise<void> {
     });
     if (javaVersion === null) {
         const choice = await vscode.window.showErrorMessage(
-            'No se encontró Java. Instala un JDK (versión 11 o superior) para ejecutar los programas.',
+            'No se encontró Java. Instala un JDK (versión 17 o superior) para ejecutar los programas.',
             'Descargar JDK'
         );
         if (choice) {

@@ -399,7 +399,8 @@ function emitNodes(nodes: IRNode[], declared: Set<string>, ctx: Ctx): string {
 
       case 'record_definition': {
         const rd = node as IRRecordDefinition;
-        out += `public record ${safeId(rd.name)}(${rd.components.map(c => `${c.type} ${safeId(c.name)}`).join(', ')}) {}\n`;
+        const recordImpl = rd.implementsInterfaces && rd.implementsInterfaces.length > 0 ? ` implements ${rd.implementsInterfaces.join(', ')}` : '';
+        out += `public record ${safeId(rd.name)}(${rd.components.map(c => `${c.type} ${safeId(c.name)}`).join(', ')})${recordImpl} {}\n`;
         break;
       }
 
@@ -554,12 +555,18 @@ function emitReturn(node: IRReturn, declared: Set<string>, ctx: Ctx): string {
 function emitClassDefinition(node: IRClassDefinition, declared: Set<string>, ctx: Ctx, member: boolean = true): string {
   // Member classes live inside PacoProgram (or another class), so they must be static to be created from main.
   // Local classes, declared inside a method, cannot take modifiers.
-  let header = `${member ? 'public static ' : ''}${node.isAbstract ? 'abstract ' : ''}class ${node.name}`;
+  // A final class cannot be abstract, so the inheritance choice wins over the checkbox.
+  const abstractMod = node.isAbstract && node.inheritance !== 'final' ? 'abstract ' : '';
+  const inheritanceMod = node.inheritance ? `${node.inheritance} ` : '';
+  let header = `${member ? 'public static ' : ''}${abstractMod}${inheritanceMod}class ${node.name}`;
   if (node.extendsClass) {
     header += ` extends ${node.extendsClass}`;
   }
   if (node.implementsInterfaces && node.implementsInterfaces.length > 0) {
     header += ` implements ${node.implementsInterfaces.join(', ')}`;
+  }
+  if (node.inheritance === 'sealed' && node.permits && node.permits.length > 0) {
+    header += ` permits ${node.permits.join(', ')}`;
   }
   const attrCode = emitClassAttributes(node.attributes, declared, ctx);
   // A generic class Caja<T> has a constructor called just Caja.
@@ -607,7 +614,8 @@ function emitInterfaceDefinition(node: IRInterfaceDefinition, declared: Set<stri
     const params = m.params.map(p => `${p.type} ${safeId(p.name)}`).join(', ');
     methodsCode += `${m.returnType} ${safeId(m.name)}(${params});\n`;
   }
-  return `public interface ${node.name} {\n${indent(methodsCode, 1)}}\n`;
+  const permits = node.isSealed && node.permits && node.permits.length > 0 ? ` permits ${node.permits.join(', ')}` : '';
+  return `public ${node.isSealed ? 'sealed ' : ''}interface ${node.name}${permits} {\n${indent(methodsCode, 1)}}\n`;
 }
 
 function emitForever(node: IRForever, declared: Set<string>, ctx: Ctx): string {

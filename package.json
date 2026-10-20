@@ -110,12 +110,12 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/vscode": "^1.100.0",
-    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-cli": "^0.0.15",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^4.0.0",
     "blockly": "^12.3.1",
     "eslint": "^9.39.1",
-    "mocha": "^11.8.0",
+    "mocha": "^12.0.3",
     "ts-loader": "^9.5.4",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.3",
@@ -124,5 +124,10 @@
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.9.12"
+  },
+  "overrides": {
+    "@vscode/test-cli": {
+      "mocha": "$mocha"
+    }
   }
 }

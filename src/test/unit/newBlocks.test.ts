@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import { xmlToIr } from '../../core/scratch/xmlToIr';
 import { irToJava } from '../../core/java/irToJava';
 import { xmlToJavaProgram } from '../../core/java/program';
-import { args, block, declareInit, field, num, print, seq, statement, text, typeBlock, value, varGet, xml } from './xmlBuilders';
+import { args, block, checkbox, declareInit, field, num, print, seq, statement, text, typeBlock, value, varGet, xml } from './xmlBuilders';
 
 function toJava(...blocks: string[]): string {
     return irToJava(xmlToIr(xml(...blocks)));
@@ -224,5 +224,40 @@ suite('Review fixes', () => {
         assert.ok(java.includes('public static void a() throws Exception {'));
         assert.ok(java.includes('public static void b() throws Exception {'));
         assert.ok(java.includes('public static void c() {'));
+    });
+
+    test('sealed, non-sealed and final classes, sealed interfaces and records that implement them', () => {
+        const java = xmlToJavaProgram(xml(
+            block('interface_definition', field('NAME', 'Figura') + field('SEALED', 'SEALED') + field('PERMITS', 'Circulo')),
+            block('record_definition', field('NAME', 'Circulo') + field('COMPONENTS', 'double r') + field('IMPLEMENTS', 'Figura')),
+            block('class_definition', field('NAME', 'Animal') + checkbox('ABSTRACT', true) + field('SEALED', 'SEALED') + field('PERMITS', 'Perro, Gato')),
+            block('class_extends', field('NAME', 'Perro') + field('PARENT', 'Animal') + field('SEALED', 'FINAL') + checkbox('ABSTRACT', true)),
+            block('class_extends', field('NAME', 'Gato') + field('PARENT', 'Animal') + field('SEALED', 'NON_SEALED')),
+        ));
+        assert.ok(java.includes('public sealed interface Figura permits Circulo {'));
+        assert.ok(java.includes('public record Circulo(double r) implements Figura {}'));
+        assert.ok(java.includes('public static abstract sealed class Animal permits Perro, Gato {'));
+        // final wins over the abstract checkbox: Java rejects "abstract final"
+        assert.ok(java.includes('public static final class Perro extends Animal {'));
+        assert.ok(java.includes('public static non-sealed class Gato extends Animal {'));
+    });
+
+    test('sealed without permits lets Java infer the subclasses, and unknown options are ignored', () => {
+        const java = xmlToJavaProgram(xml(
+            block('class_definition', field('NAME', 'A') + field('SEALED', 'SEALED') + field('PERMITS', '')),
+            block('class_definition', field('NAME', 'B') + field('SEALED', 'public; evil') + field('PERMITS', 'X')),
+            block('class_definition', field('NAME', 'C') + field('SEALED', 'SEALED') + field('PERMITS', 'D; System.exit(0)')),
+        ));
+        assert.ok(java.includes('public static sealed class A {'));
+        assert.ok(java.includes('public static class B {'));
+        assert.ok(java.includes('public static sealed class C permits DSystem.exit0 {'));
+    });
+
+    test('package goes on the first line, before the imports', () => {
+        const java = xmlToJavaProgram(xml(seq(
+            block('import_library', field('LIBRARY', 'java.util.List')),
+            block('package_declaration', field('NAME', 'com.mi_juego; class X {}')),
+        )));
+        assert.ok(java.startsWith('package com.mi_juegoclassX;\n\nimport java.util.List;'));
     });
 });

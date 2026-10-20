@@ -249,6 +249,10 @@ function parseBlockSequence(firstBlock: Element | null): IRNode[] {
       }
       else if (type === 'import_library') {
         result.push(parseImport(current));
+      } else if (type === 'package_declaration') {
+        // Solo letras, números, _ y puntos: com.ejemplo.juego
+        const name = fieldText(current, 'NAME', 'com.ejemplo').replace(/[^\w.]/g, '').replace(/^\.+|\.+$/g, '');
+        result.push({ kind: 'package', name: name || 'com.ejemplo' });
       } else if (type === 'desktop_app') {
         result.push(parseDesktopApp(current));
       } else if (type === 'mobile_app') {
@@ -1169,7 +1173,21 @@ function parseClassDefinition(block: Element): IRClassDefinition {
   const attributes = attrStmt ? parseAttributes(attrStmt) : [];
   const methodsStmt = findStatement(block, 'METHODS');
   const methods = methodsStmt ? parseMethods(methodsStmt) : [];
-  return { kind: 'class_definition', name, attributes, methods, isAbstract: isChecked(block, 'ABSTRACT'), innerClasses: methodsStmt ? parseInnerClasses(methodsStmt) : [] };
+  return { kind: 'class_definition', name, attributes, methods, isAbstract: isChecked(block, 'ABSTRACT'), ...parseInheritance(block), innerClasses: methodsStmt ? parseInnerClasses(methodsStmt) : [] };
+}
+
+/** Lee el desplegable de herencia (normal, sealed, non-sealed, final) y la lista "permite". */
+function parseInheritance(block: Element): Pick<IRClassDefinition, 'inheritance' | 'permits'> {
+  const mode = choice(block, 'SEALED', ['NONE', 'SEALED', 'NON_SEALED', 'FINAL']);
+  if (mode === 'NONE') {
+    return {};
+  }
+  const inheritance = mode === 'SEALED' ? 'sealed' : mode === 'NON_SEALED' ? 'non-sealed' : 'final';
+  return { inheritance, permits: mode === 'SEALED' ? parsePermits(block) : [] };
+}
+
+function parsePermits(block: Element): string[] {
+  return fieldText(block, 'PERMITS', '').split(',').map(t => t.replace(/[^\w.]/g, '')).filter(t => t.length > 0);
 }
 
 function parseClassExtends(block: Element): IRClassDefinition {
@@ -1181,7 +1199,7 @@ function parseClassExtends(block: Element): IRClassDefinition {
   const attributes = attrStmt ? parseAttributes(attrStmt) : [];
   const methodsStmt = findStatement(block, 'METHODS');
   const methods = methodsStmt ? parseMethods(methodsStmt) : [];
-  return { kind: 'class_definition', name, attributes, methods, extendsClass, isAbstract: isChecked(block, 'ABSTRACT'), innerClasses: methodsStmt ? parseInnerClasses(methodsStmt) : [] };
+  return { kind: 'class_definition', name, attributes, methods, extendsClass, isAbstract: isChecked(block, 'ABSTRACT'), ...parseInheritance(block), innerClasses: methodsStmt ? parseInnerClasses(methodsStmt) : [] };
 }
 
 function parseClassImplements(block: Element): IRClassDefinition {
@@ -1193,7 +1211,7 @@ function parseClassImplements(block: Element): IRClassDefinition {
   const attributes = attrStmt ? parseAttributes(attrStmt) : [];
   const methodsStmt = findStatement(block, 'METHODS');
   const methods = methodsStmt ? parseMethods(methodsStmt) : [];
-  return { kind: 'class_definition', name, attributes, methods, implementsInterfaces: iface.split(',').map(i => i.trim()).filter(i => i.length > 0), isAbstract: isChecked(block, 'ABSTRACT'), innerClasses: methodsStmt ? parseInnerClasses(methodsStmt) : [] };
+  return { kind: 'class_definition', name, attributes, methods, implementsInterfaces: iface.split(',').map(i => i.trim()).filter(i => i.length > 0), isAbstract: isChecked(block, 'ABSTRACT'), ...parseInheritance(block), innerClasses: methodsStmt ? parseInnerClasses(methodsStmt) : [] };
 }
 
 function parseInterfaceDefinition(block: Element): IRInterfaceDefinition {
@@ -1201,7 +1219,8 @@ function parseInterfaceDefinition(block: Element): IRInterfaceDefinition {
   const name = nameField ? nameField.textContent || 'MiInterfaz' : 'MiInterfaz';
   const methodsStmt = findStatement(block, 'METHODS');
   const methods = methodsStmt ? parseInterfaceMethods(methodsStmt) : [];
-  return { kind: 'interface_definition', name, methods };
+  const isSealed = choice(block, 'SEALED', ['NONE', 'SEALED']) === 'SEALED';
+  return { kind: 'interface_definition', name, methods, isSealed, permits: isSealed ? parsePermits(block) : [] };
 }
 
 function parseInterfaceMethods(stmt: Element): { returnType: string; name: string; params: { type: string; name: string }[] }[] {
@@ -1763,6 +1782,7 @@ function parseExtraStatement(block: Element, type: string): IRNode[] {
           const space = c.lastIndexOf(' ');
           return space > 0 ? { type: typeName(c.slice(0, space)), name: c.slice(space + 1) } : { type: 'Object', name: c };
         }),
+        implementsInterfaces: fieldText(block, 'IMPLEMENTS', '').split(',').map(t => typeName(t)).filter(t => t !== 'Object'),
       }];
 
     case 'stream_for_each':

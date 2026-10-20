@@ -20,6 +20,7 @@ export type IRNode =
   | IRReturn
   | IRClassDefinition
   | IRInterfaceDefinition
+  | IRPackage
   | IRBreak
   | IRContinue
   | IRTryCatchFinally
@@ -205,6 +206,10 @@ export interface IRClassDefinition {
   implementsInterfaces?: string[];
   accessModifier?: string;
   isAbstract?: boolean;
+  /** Herencia restringida (Java 17): sealed, non-sealed o final. */
+  inheritance?: 'sealed' | 'non-sealed' | 'final';
+  /** Subclases permitidas de una clase sealed; vacío deja que Java las deduzca del archivo. */
+  permits?: string[];
   innerClasses?: IRClassDefinition[];
 }
 
@@ -466,6 +471,8 @@ export interface IREnumDefinition {
 export interface IRInterfaceDefinition {
   kind: 'interface_definition';
   name: string;
+  isSealed?: boolean;
+  permits?: string[];
   methods: { returnType: string; name: string; params: IRParameter[] }[];
 }
 
@@ -484,6 +491,11 @@ export interface IRSynchronized {
 export interface IRImport {
   kind: 'import';
   library: string;
+}
+
+export interface IRPackage {
+  kind: 'package';
+  name: string;
 }
 
 export interface IRCodeTemplate {
@@ -776,6 +788,7 @@ export interface IRRecordDefinition {
   kind: 'record_definition';
   name: string;
   components: IRParameter[];
+  implementsInterfaces?: string[];
 }
 
 export interface IRLambdaBlock {

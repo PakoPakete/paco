@@ -380,6 +380,7 @@ window.addEventListener('load', () => {
         name: ' Librerías',
         colour: '#2ECC71',
         contents: [
+          { kind: 'block', type: 'package_declaration' },
           { kind: 'block', type: 'import_library' },
           { kind: 'block', type: 'desktop_app' },
           { kind: 'block', type: 'mobile_app' },
@@ -1179,10 +1180,15 @@ window.addEventListener('load', () => {
   //  OOP
 
 
+  // Herencia de Java 17: una clase sealed decide quién la extiende; sus hijas tienen que ser final, sealed o non-sealed.
+  const PACO_INHERITANCE = [['normal', 'NONE'], ['sealed', 'SEALED'], ['non-sealed', 'NON_SEALED'], ['final', 'FINAL']];
+
   Blockly.Blocks['class_definition'] = {
     init: function() {
       this.appendDummyInput().appendField('clase').appendField(new Blockly.FieldTextInput('MiClase'), 'NAME')
         .appendField('abstracta').appendField(new Blockly.FieldCheckbox('FALSE'), 'ABSTRACT');
+      this.appendDummyInput().appendField('herencia').appendField(new Blockly.FieldDropdown(PACO_INHERITANCE), 'SEALED')
+        .appendField('permite').appendField(new Blockly.FieldTextInput(''), 'PERMITS');
       this.appendStatementInput('ATTRIBUTES').appendField('atributos');
       this.appendStatementInput('METHODS').appendField('métodos');
       // Encadenable para poder poner una clase dentro de otra (clase interna).
@@ -1197,6 +1203,8 @@ window.addEventListener('load', () => {
       this.appendDummyInput().appendField('clase').appendField(new Blockly.FieldTextInput('Hijo'), 'NAME')
         .appendField('extiende').appendField(new Blockly.FieldTextInput('Padre'), 'PARENT')
         .appendField('abstracta').appendField(new Blockly.FieldCheckbox('FALSE'), 'ABSTRACT');
+      this.appendDummyInput().appendField('herencia').appendField(new Blockly.FieldDropdown(PACO_INHERITANCE), 'SEALED')
+        .appendField('permite').appendField(new Blockly.FieldTextInput(''), 'PERMITS');
       this.appendStatementInput('ATTRIBUTES').appendField('atributos');
       this.appendStatementInput('METHODS').appendField('métodos');
       // Encadenable para poder poner una clase dentro de otra (clase interna).
@@ -1209,9 +1217,12 @@ window.addEventListener('load', () => {
 
   Blockly.Blocks['interface_definition'] = {
     init: function() {
-      this.appendDummyInput().appendField('interfaz').appendField(new Blockly.FieldTextInput('MiInterfaz'), 'NAME');
+      this.appendDummyInput().appendField('interfaz').appendField(new Blockly.FieldTextInput('MiInterfaz'), 'NAME')
+        .appendField(new Blockly.FieldDropdown([['normal', 'NONE'], ['sealed', 'SEALED']]), 'SEALED')
+        .appendField('permite').appendField(new Blockly.FieldTextInput(''), 'PERMITS');
       this.appendStatementInput('METHODS').appendField('métodos');
       this.setColour(0);
+      this.setTooltip('Interfaz. "sealed" limita qué clases o records pueden implementarla (Java 17); si "permite" queda vacío, Java lo deduce.');
     }
   };
 
@@ -1220,6 +1231,8 @@ window.addEventListener('load', () => {
       this.appendDummyInput().appendField('clase').appendField(new Blockly.FieldTextInput('MiClase'), 'NAME')
         .appendField('implementa').appendField(new Blockly.FieldTextInput('MiInterfaz'), 'INTERFACE')
         .appendField('abstracta').appendField(new Blockly.FieldCheckbox('FALSE'), 'ABSTRACT');
+      this.appendDummyInput().appendField('herencia').appendField(new Blockly.FieldDropdown(PACO_INHERITANCE), 'SEALED')
+        .appendField('permite').appendField(new Blockly.FieldTextInput(''), 'PERMITS');
       this.appendStatementInput('ATTRIBUTES').appendField('atributos');
       this.appendStatementInput('METHODS').appendField('métodos');
       // Encadenable para poder poner una clase dentro de otra (clase interna).
@@ -1513,6 +1526,16 @@ window.addEventListener('load', () => {
 
 
   //  LIBRERÍAS Y ECOSISTEMA
+
+  Blockly.Blocks['package_declaration'] = {
+    init: function() {
+      this.appendDummyInput().appendField('paquete').appendField(new Blockly.FieldTextInput('com.ejemplo'), 'NAME');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(160);
+      this.setTooltip('package com.ejemplo; (va la primera línea del archivo)');
+    }
+  };
 
   Blockly.Blocks['import_library'] = {
     init: function() {
@@ -2237,7 +2260,8 @@ window.addEventListener('load', () => {
   Blockly.Blocks['record_definition'] = {
     init: function() {
       this.appendDummyInput().appendField('record').appendField(new Blockly.FieldTextInput('Persona'), 'NAME')
-        .appendField('(').appendField(new Blockly.FieldTextInput('String nombre, int edad'), 'COMPONENTS').appendField(')');
+        .appendField('(').appendField(new Blockly.FieldTextInput('String nombre, int edad'), 'COMPONENTS').appendField(')')
+        .appendField('implementa').appendField(new Blockly.FieldTextInput(''), 'IMPLEMENTS');
       this.setColour(0);
       this.setTooltip('Clase de datos: crea constructor, getters (p.nombre()), equals y toString solos');
     }

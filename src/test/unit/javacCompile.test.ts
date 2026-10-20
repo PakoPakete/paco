@@ -371,6 +371,24 @@ const programs: { name: string; xml: string }[] = [
             ),
         ),
     },
+    {
+        name: 'package, sealed interface with records and sealed class hierarchy',
+        xml: xml(
+            block('package_declaration', field('NAME', 'com.ejemplo')),
+            block('interface_definition', field('NAME', 'Figura') + field('SEALED', 'SEALED') + field('PERMITS', 'Circulo, Cuadrado')),
+            block('record_definition', field('NAME', 'Circulo') + field('COMPONENTS', 'double radio') + field('IMPLEMENTS', 'Figura')),
+            block('record_definition', field('NAME', 'Cuadrado') + field('COMPONENTS', 'double lado') + field('IMPLEMENTS', 'Figura')),
+            block('class_definition', field('NAME', 'Animal') + checkbox('ABSTRACT', true) + field('SEALED', 'SEALED') + field('PERMITS', '')),
+            block('class_extends', field('NAME', 'Perro') + field('PARENT', 'Animal') + field('SEALED', 'FINAL')),
+            block('class_extends', field('NAME', 'Gato') + field('PARENT', 'Animal') + field('SEALED', 'NON_SEALED')),
+            block('class_extends', field('NAME', 'GatoPersa') + field('PARENT', 'Gato')),
+            seq(
+                block('variable_declaration_init', value('TYPE', customType('Figura')) + field('VAR', 'f') +
+                    value('VALUE', block('object_instantiation', field('CLASS', 'Circulo') + args(num(2))))),
+                print(varGet('f')),
+            ),
+        ),
+    },
 ];
 
 suite('Generated Java compiles with javac', function () {
