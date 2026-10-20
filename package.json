@@ -2,7 +2,6 @@
   "name": "paco",
   "displayName": "PACO - Visual Java Editor",
   "description": "PACO: visual block editor (Scratch-style) that generates compilable Java code in real time. Learn Java visually.",
-
   "version": "0.4.3",
   "publisher": "FranciscoSZ",
   "license": "MIT",
@@ -32,7 +31,7 @@
     "blocks",
     "code generation"
   ],
-"main": "./dist/extension.js",
+  "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -80,7 +79,6 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/vscode": "^1.100.0",
-    "@types/xmldom": "^0.1.34",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.39.1",
@@ -91,7 +89,7 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "blockly": "^12.3.1",
-    "xmldom": "^0.6.0"
+    "@xmldom/xmldom": "^0.9.12",
+    "blockly": "^12.3.1"
   }
 }

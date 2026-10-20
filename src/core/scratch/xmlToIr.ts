@@ -1,4 +1,4 @@
-import { DOMParser } from 'xmldom';
+import { DOMParser, Element } from '@xmldom/xmldom';
 import {
   IRNode,
   IRExpr,
@@ -84,6 +84,9 @@ import {
 export function xmlToIr(xml: string): IRNode[] {
   const doc = new DOMParser().parseFromString(xml, 'text/xml');
   const root = doc.documentElement;
+  if (!root) {
+    return [];
+  }
 
   let result: IRNode[] = [];
 
