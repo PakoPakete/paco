@@ -313,12 +313,11 @@ function emitSwitch(node: IRSwitch, declared: Set<string>, ctx: { loopCounter: n
   const exprCode = emitExpr(node.expr, declared);
   let casesCode = '';
   for (const c of node.cases) {
-    if (c.value) {
-      const valCode = emitExpr(c.value, declared);
-      casesCode += `case ${valCode}:\n${indent(emitNodes(c.body, declared, ctx), 1)}break;\n`;
-    } else {
-      casesCode += `default:\n${indent(emitNodes(c.body, declared, ctx), 1)}break;\n`;
-    }
+    const label = c.value ? `case ${emitExpr(c.value, declared)}:` : 'default:';
+    const last = c.body.length > 0 ? c.body[c.body.length - 1].kind : '';
+    // A trailing break after an explicit break/continue/return/throw is unreachable and javac rejects it.
+    const autoBreak = ['break', 'return', 'throw', 'continue'].includes(last) ? '' : 'break;\n';
+    casesCode += `${label}\n${indent(emitNodes(c.body, declared, ctx) + autoBreak, 1)}`;
   }
   return `switch (${exprCode}) {\n${indent(casesCode, 1)}}\n`;
 }
