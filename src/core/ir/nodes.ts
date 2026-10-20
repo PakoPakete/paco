@@ -20,6 +20,7 @@ export type IRNode =
   | IRReturn
   | IRClassDefinition
   | IRInterfaceDefinition
+  | IRPackage
   | IRBreak
   | IRContinue
   | IRTryCatchFinally
@@ -48,7 +49,24 @@ export type IRNode =
   | IREncryptDecrypt
   | IRDesktopApp
   | IRMobileApp
-  | IRWebService;
+  | IRWebService
+  | IRDoWhile
+  | IRForEach
+  | IRCompoundAssign
+  | IRMethodCall
+  | IRFieldAssign
+  | IRPrintf
+  | IRSuperCall
+  | IRConstantDeclaration
+  | IRArray2DDeclaration
+  | IRArray2DAssignment
+  | IRCollectionDeclaration
+  | IRExprStatement
+  | IRLabeled
+  | IRJumpLabel
+  | IRAssert
+  | IRSwitchArrow
+  | IRRecordDefinition;
 
 export type IRExpr =
   | IRNumber
@@ -77,7 +95,21 @@ export type IRExpr =
   | IRTimerExpr
   | IRLambda
   | IRStreamFilter
-  | IRFunctionCallExpr;
+  | IRFunctionCallExpr
+  | IRMethodCallExpr
+  | IRFieldAccess
+  | IRCharLiteral
+  | IRNull
+  | IRSuperRef
+  | IRStaticCall
+  | IRConstant
+  | IRArray2DAccess
+  | IRInstanceOf
+  | IRLambdaBlock
+  | IRMethodRef
+  | IRSwitchExpr
+  | IRTextBlock
+  | IRAnonymousClass;
 
 export interface IRComment {
   kind: 'comment';
@@ -89,6 +121,9 @@ export interface IRVarDeclaration {
   type: string;
   name: string;
   accessModifier?: string;
+  isStatic?: boolean;
+  isFinal?: boolean;
+  value?: IRExpr;
 }
 
 export interface IRVarDeclarationInit {
@@ -142,6 +177,8 @@ export interface IRFunctionDefinition {
   accessModifier?: string;
   isStatic?: boolean;
   isOverride?: boolean;
+  isAbstract?: boolean;
+  throwsTypes?: string;
 }
 
 export interface IRParameter {
@@ -168,6 +205,12 @@ export interface IRClassDefinition {
   extendsClass?: string;
   implementsInterfaces?: string[];
   accessModifier?: string;
+  isAbstract?: boolean;
+  /** Herencia restringida (Java 17): sealed, non-sealed o final. */
+  inheritance?: 'sealed' | 'non-sealed' | 'final';
+  /** Subclases permitidas de una clase sealed; vacío deja que Java las deduzca del archivo. */
+  permits?: string[];
+  innerClasses?: IRClassDefinition[];
 }
 
 export interface IRAttribute extends IRVarDeclaration {}
@@ -267,6 +310,8 @@ export interface IRContinue {
 export interface IRPrint {
   kind: 'print';
   value: IRExpr;
+  /** false emits System.out.print (no line break). */
+  newline?: boolean;
 }
 
 export interface IRTextConcat {
@@ -333,6 +378,14 @@ export interface IRTryCatchFinally {
   catchVar: string;
   catchBody: IRNode[];
   finallyBody: IRNode[];
+  /** When present, replaces the single catchType/catchVar/catchBody clause. */
+  catches?: IRCatch[];
+}
+
+export interface IRCatch {
+  type: string;
+  varName: string;
+  body: IRNode[];
 }
 
 export interface IRThrow {
@@ -418,6 +471,8 @@ export interface IREnumDefinition {
 export interface IRInterfaceDefinition {
   kind: 'interface_definition';
   name: string;
+  isSealed?: boolean;
+  permits?: string[];
   methods: { returnType: string; name: string; params: IRParameter[] }[];
 }
 
@@ -436,6 +491,11 @@ export interface IRSynchronized {
 export interface IRImport {
   kind: 'import';
   library: string;
+}
+
+export interface IRPackage {
+  kind: 'package';
+  name: string;
 }
 
 export interface IRCodeTemplate {
@@ -548,4 +608,209 @@ export interface IRWebService {
   kind: 'web_service';
   path: string;
   body: IRNode[];
+}
+
+export interface IRDoWhile {
+  kind: 'do_while';
+  condition: IRExpr;
+  body: IRNode[];
+}
+
+export interface IRForEach {
+  kind: 'for_each';
+  elementType: string;
+  name: string;
+  collection: IRExpr;
+  body: IRNode[];
+}
+
+export interface IRCompoundAssign {
+  kind: 'compound_assign';
+  name: string;
+  op: string;
+  value: IRExpr;
+}
+
+export interface IRMethodCall {
+  kind: 'method_call';
+  target: IRExpr;
+  method: string;
+  args: IRExpr[];
+}
+
+export interface IRMethodCallExpr {
+  kind: 'method_call_expr';
+  target: IRExpr;
+  method: string;
+  args: IRExpr[];
+}
+
+export interface IRFieldAccess {
+  kind: 'field_access';
+  target: IRExpr;
+  field: string;
+}
+
+export interface IRFieldAssign {
+  kind: 'field_assign';
+  target: IRExpr;
+  field: string;
+  value: IRExpr;
+}
+
+export interface IRPrintf {
+  kind: 'printf';
+  format: string;
+  args: IRExpr[];
+}
+
+export interface IRSuperCall {
+  kind: 'super_call';
+  args: IRExpr[];
+}
+
+export interface IRConstantDeclaration {
+  kind: 'constant_declaration';
+  type: string;
+  name: string;
+  value: IRExpr;
+}
+
+export interface IRArray2DDeclaration {
+  kind: 'array2d_declaration';
+  type: string;
+  name: string;
+  rows: IRExpr;
+  cols: IRExpr;
+}
+
+export interface IRArray2DAssignment {
+  kind: 'array2d_assignment';
+  name: string;
+  row: IRExpr;
+  col: IRExpr;
+  value: IRExpr;
+}
+
+export interface IRArray2DAccess {
+  kind: 'array2d_access';
+  name: string;
+  row: IRExpr;
+  col: IRExpr;
+}
+
+export interface IRCollectionDeclaration {
+  kind: 'collection_declaration';
+  /** java.util class, e.g. LinkedList, HashSet, Stack, ArrayDeque. */
+  collectionType: string;
+  elementType: string;
+  name: string;
+}
+
+export interface IRCharLiteral {
+  kind: 'char';
+  value: string;
+}
+
+export interface IRNull {
+  kind: 'null';
+}
+
+export interface IRSuperRef {
+  kind: 'super_ref';
+}
+
+/** Call to a fixed library function picked from a dropdown, e.g. Math.max or Collections.sort. */
+export interface IRStaticCall {
+  kind: 'static_call';
+  callee: string;
+  args: IRExpr[];
+}
+
+/** Library constant picked from a dropdown, e.g. Math.PI or Integer.MAX_VALUE. */
+export interface IRConstant {
+  kind: 'constant';
+  code: string;
+}
+
+export interface IRInstanceOf {
+  kind: 'instance_of';
+  expr: IRExpr;
+  className: string;
+  /** Pattern matching: `x instanceof Perro p`. */
+  bindName?: string;
+}
+
+/** An expression used as a statement, e.g. Collections.sort(lista); */
+export interface IRExprStatement {
+  kind: 'expr_statement';
+  expr: IRExpr;
+}
+
+/** A loop with a label, so break/continue can leave an outer loop. */
+export interface IRLabeled {
+  kind: 'labeled';
+  label: string;
+  body: IRNode[];
+}
+
+export interface IRJumpLabel {
+  kind: 'jump_label';
+  jump: 'break' | 'continue';
+  label: string;
+}
+
+export interface IRAssert {
+  kind: 'assert';
+  condition: IRExpr;
+  message?: IRExpr;
+}
+
+export interface IRArrowCase {
+  /** Undefined is the default branch. */
+  value?: IRExpr;
+  body: IRNode[];
+}
+
+export interface IRSwitchArrow {
+  kind: 'switch_arrow';
+  expr: IRExpr;
+  cases: IRArrowCase[];
+}
+
+export interface IRSwitchExpr {
+  kind: 'switch_expr';
+  expr: IRExpr;
+  cases: { value?: IRExpr; result: IRExpr }[];
+}
+
+export interface IRRecordDefinition {
+  kind: 'record_definition';
+  name: string;
+  components: IRParameter[];
+  implementsInterfaces?: string[];
+}
+
+export interface IRLambdaBlock {
+  kind: 'lambda_block';
+  params: string[];
+  body: IRNode[];
+}
+
+/** Clase::metodo or objeto::metodo. */
+export interface IRMethodRef {
+  kind: 'method_ref';
+  target: string;
+  method: string;
+}
+
+export interface IRTextBlock {
+  kind: 'text_block';
+  lines: string[];
+}
+
+export interface IRAnonymousClass {
+  kind: 'anonymous_class';
+  className: string;
+  methods: IRFunctionDefinition[];
 }

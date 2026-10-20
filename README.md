@@ -1,99 +1,85 @@
-# PACO - Visual Java Editor
+# PACO - Editor visual de Java
 
-**PACO** (Programming Adapter for Code Overlay) - version 0.2.0
+**PACO** (Programming Adapter for Code Overlay) es una extensión de Visual Studio Code para aprender Java con bloques estilo Scratch. Cada bloque que colocas se traduce al instante en código Java que compila, y con un clic puedes ejecutarlo.
 
-Made by **Francisco Solano Žderić**
+Hecho por **Francisco Solano Žderić**.
+
+![Se colocan bloques, PACO escribe el Java al lado y el botón Ejecutar muestra la salida](images/screenshots/demo.gif)
+
+## Qué hace
+
+- Editor de bloques basado en Blockly, integrado en VS Code y en español.
+- Java en tiempo real: cada cambio en los bloques actualiza el código Java de la derecha.
+- Botón **▶ Ejecutar**: compila y ejecuta el programa en un terminal, así que también puede leer del teclado.
+- Los programas se guardan como archivos `.paco`. Si tienes una carpeta abierta, cada programa nuevo se crea en ella como `ProgramaN.paco`; al abrir un `.paco` aparecen sus bloques, y `Ctrl+S` los guarda.
+- Cubre Java de un curso completo: control de flujo, variables y tipos, arrays, colecciones, funciones, clases, interfaces, herencia, excepciones, concurrencia, lambdas y streams, entrada y salida, y Java moderno (`record`, clases e interfaces `sealed`, `switch` con flechas, `var`...).
+- Si unos bloques no se pueden traducir, el editor lo avisa en vez de dejar el Java viejo sin decir nada.
+
+## Cómo se usa
+
+1. Haz clic en el icono de PACO en la barra de actividad (a la izquierda).
+2. Pulsa **Abrir Editor PACO**. También puedes ejecutar `PACO: Abrir Editor Visual de Java` desde la paleta de comandos (`Ctrl+Shift+P`), o abrir cualquier archivo `.paco`.
+3. Arrastra bloques desde el menú de la izquierda, empezando por **cuando bandera verde presionada**.
+4. Pulsa **▶ Ejecutar** (o el botón ▷ de la barra del editor) para ver lo que hace tu programa.
+
+## Requisitos
+
+- Visual Studio Code 1.100 o superior.
+- Para ejecutar los programas, un JDK 17 o superior (por ejemplo [Eclipse Temurin 21](https://adoptium.net/)). Si PACO no encuentra Java, te ofrece descargarlo.
 
 ---
 
 ## English
 
-PACO is a Visual Studio Code extension that converts visual Blockly-style blocks into compilable Java code in real time. Designed for learning Java visually, it lets you build programs by dragging blocks and instantly see the equivalent Java code.
-
-### Features
-
-- Visual block editor based on Blockly, integrated directly into VS Code.
-- Real-time Java generation: every change in the blocks immediately updates the Java code.
-- Java syntax support: control flow, variables, arrays, lists, functions, classes, interfaces, inheritance, exceptions, concurrency, lambdas, I/O, and more.
-- Multiple editors: open several independent editors simultaneously.
-
-### Usage
-
-1. Click the PACO icon in the Activity Bar (left sidebar).
-2. In the welcome panel that opens, click "Abrir Editor PACO".
-3. Two panels open: the block editor (left) and the generated Java code (right).
-4. Drag blocks from the toolbox and build your program.
-
-You can also run "PACO: Open Visual Java Editor" from the command palette (Ctrl+Shift+P).
-
-### Requirements
-
-- Visual Studio Code 1.100.0 or higher.
-- To compile and run the generated Java code you need the JDK and the Extension Pack for Java.
+PACO is a VS Code extension for learning Java with Scratch-style blocks. Every block you place is translated in real time into compilable Java, and the **▶ Ejecutar** (Run) button compiles and runs it in a terminal. Programs are saved as `.paco` files. Running programs requires JDK 17 or later. The interface is in Spanish.
 
 ---
 
-## Español
+## Desarrollo
 
-PACO (Programming Adapter for Code Overlay) es una extension de Visual Studio Code que convierte bloques visuales estilo Scratch en codigo Java compilable, en tiempo real. Diseñada para aprender Java de forma visual, permite construir programas arrastrando bloques y ver al instante el codigo Java equivalente.
-
-### Caracteristicas
-
-- Editor visual de bloques basado en Blockly, integrado directamente en VS Code.
-- Generacion de Java en tiempo real: cada cambio en los bloques actualiza el codigo Java automaticamente.
-- Soporte amplio de sintaxis Java: control de flujo, variables, arrays, listas, funciones, clases, interfaces, herencia, excepciones, concurrencia, lambdas, E/S y mas.
-- Multiples editores: abre varios editores independientes a la vez.
-
-### Uso
-
-1. Haz clic en el icono de PACO en la barra de actividad (barra lateral izquierda).
-2. En el panel de bienvenida que se abre, haz clic en "Abrir Editor PACO".
-3. Se abren dos paneles: el editor de bloques (izquierda) y el codigo Java generado (derecha).
-4. Arrastra bloques desde el menu lateral y construye tu programa.
-
-Tambien puedes ejecutar "PACO: Abrir Editor Visual de Java" desde la paleta de comandos (Ctrl+Shift+P).
-
-### Requisitos
-
-- Visual Studio Code 1.100.0 o superior.
-- Para compilar y ejecutar el codigo Java generado necesitas el JDK y la extension Extension Pack for Java.
-
----
-
-## Development
-
-### Build and run locally
+### Compilar y probar
 
 ```
 npm install
 npm run compile
+npm test
 ```
 
-Press F5 in VS Code to launch the Extension Development Host.
+Pulsa `F5` en VS Code para abrir una ventana de desarrollo con la extensión cargada. `npm test` ejecuta los tests del generador de Java; si hay un `javac` en el PATH, también comprueba que el Java generado compila.
 
-### Package for distribution
+### Generar el paquete para el Marketplace (.vsix)
+
+El Marketplace no acepta el código fuente: hay que subir un archivo `.vsix`.
 
 ```
-npm install -g @vscode/vsce
-vsce package
+npm install
+npm run vsix
 ```
 
-### Adding a new block
+Eso crea `paco-<versión>.vsix` en la carpeta del proyecto. Para probarlo antes de publicarlo: en VS Code, `Extensiones` → `...` → `Instalar desde VSIX...`.
 
-1. Define the block UI in media/index.js.
-2. Add it to the toolbox JSON in the same file.
-3. Add a parser case in src/core/scratch/xmlToIr.ts.
-4. If it introduces a new IR node, add the interface to src/core/ir/nodes.ts.
-5. Add an emitter case in src/core/java/irToJava.ts.
+### Publicar una versión nueva
+
+1. Sube el número de `version` en `package.json` y añade la entrada en `CHANGELOG.md`.
+2. Genera el `.vsix` con `npm run vsix`.
+3. Súbelo en [marketplace.visualstudio.com/manage](https://marketplace.visualstudio.com/manage/publishers/FranciscoSZ) (publisher `FranciscoSZ`) con **Update** sobre PACO. También se puede hacer con `npx vsce publish` y un token personal de Azure DevOps.
+
+### Añadir un bloque nuevo
+
+1. Define el bloque en `media/index.js` y añádelo al toolbox del mismo archivo.
+2. Añade su caso en el parser `src/core/scratch/xmlToIr.ts`.
+3. Si necesita un nodo IR nuevo, añade su interfaz en `src/core/ir/nodes.ts`.
+4. Añade el caso que genera Java en `src/core/java/irToJava.ts`.
+5. Añade un test en `src/test/unit/`.
 
 ---
 
-## Author
+## Autor
 
-Francisco Solano Žderić  
-GitHub: https://github.com/PakoPakete  
+Francisco Solano Žderić
+GitHub: https://github.com/PakoPakete
 VS Marketplace: https://marketplace.visualstudio.com/publishers/FranciscoSZ
 
-## License
+## Licencia
 
 MIT - 2025 Francisco Solano Žderić
