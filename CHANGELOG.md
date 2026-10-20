@@ -3,17 +3,13 @@
 All notable changes to PACO will be documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
-
-### Fixed
-- Funciones (`función`, `void función`, `función genérica`) ahora se generan como métodos de `PacoProgram` y no dentro de `main`, así que el programa compila.
-- Las clases se generan como `public static class`, para poder crearlas con `new` desde `main`.
-- "número aleatorio" devuelve un `int` entre los dos límites, ambos incluidos.
-- "llamar función" y "new" aceptan de 0 a 5 argumentos; los programas guardados con la entrada antigua siguen funcionando.
-- `main` declara `throws Exception`, así compilan leer archivo, URL, BD, reflexión y comandos.
-- Los textos escapan comillas y barras sueltas; `throw new` con un texto genera `new RuntimeException("...")`; dos bloques "ejecutar en paralelo" ya no repiten `t1`/`t2`.
+## [0.5.0] – 2026-10-20
 
 ### Added
+- Botón "▶ Ejecutar" en el editor de bloques y comando "PACO: Ejecutar programa Java": guarda el Java generado y lo ejecuta en un terminal (necesita un JDK 11 o superior; si no lo encuentra, ofrece descargarlo).
+- Si los bloques no se pueden traducir a Java, aparece un aviso en el editor y el detalle se escribe en el canal de salida "PACO".
+- Los textos propios de Blockly (menús, "Eliminar bloque", "Duplicar"...) salen en español.
+- Script `npm run vsix` para generar el paquete `.vsix` que se sube al Marketplace.
 - Block programs are saved as `.paco` files (Blockly XML). Opening a `.paco` file shows the block editor, and Ctrl+S saves it.
 - The block editor keeps its blocks when its tab is hidden and shown again.
 - Control: do-while, for-each, for clásico (`<`, `<=`, `>`, `>=`, `++`, `--`, `+=`, `-=`).
@@ -27,6 +23,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Colecciones: `LinkedList`, `HashSet`, `TreeSet`, `Stack`, `ArrayDeque` con sus operaciones, y `getOrDefault`/`keySet`/`values` en mapas.
 - Entrada: leer boolean, leer palabra y "¿hay un entero para leer?". Si una función lee del teclado, el `Scanner` pasa a ser un campo compartido.
 - Java moderno: `switch` con flechas y como expresión, `record`, `var`, text blocks, `instanceof` con variable, clases genéricas (`Caja<T>`), clases internas y anónimas, varargs (`int...`), lambdas con varias instrucciones, referencias a métodos (`System.out::println`), streams (`filter`, `map`, `sorted`, suma, media, máximo...), `Optional`, `LocalDate`, operadores de bits, `break`/`continue` con etiqueta, `assert`, `ExecutorService`, `join` y `AtomicInteger`.
+
+### Changed
+- La barra del editor usa los colores del tema de VS Code, y las categorías del menú de bloques se leen bien también con temas oscuros.
+- La webview tiene Content-Security-Policy, y los iconos y sonidos de Blockly vienen incluidos en la extensión (antes se descargaban de internet).
+- Se sustituye la librería abandonada `xmldom` por `@xmldom/xmldom`.
+- `blockly` pasa a dependencia de desarrollo: la extensión usa la copia incluida en `media/blockly`.
+
+### Fixed
+- Funciones (`función`, `void función`, `función genérica`) ahora se generan como métodos de `PacoProgram` y no dentro de `main`, así que el programa compila.
+- Las clases se generan como `public static class`, para poder crearlas con `new` desde `main`.
+- "número aleatorio" devuelve un `int` entre los dos límites, ambos incluidos.
+- "llamar función" y "new" aceptan de 0 a 5 argumentos; los programas guardados con la entrada antigua siguen funcionando.
+- `main` declara `throws Exception`, así compilan leer archivo, URL, BD, reflexión y comandos.
+- Los textos escapan comillas y barras sueltas; `throw new` con un texto genera `new RuntimeException("...")`; dos bloques "ejecutar en paralelo" ya no repiten `t1`/`t2`.
+
+### Removed
+- Archivos sobrantes `images/a.svg` y `bloquesQReparar.txt` (sus arreglos ya están en este CHANGELOG).
 
 ---
 

@@ -2422,6 +2422,8 @@ window.addEventListener('load', () => {
     toolbox: toolbox,
     scrollbars: true,
     trashcan: true,
+    // Iconos y sonidos incluidos en la extensión, para que funcione sin conexión
+    media: document.body.dataset.root + '/blockly/media/',
     disable: false,
     readOnly: false
   });
@@ -2502,6 +2504,24 @@ window.addEventListener('load', () => {
     loadXml(previousState.xml);
   }
   vscode.postMessage({ type: 'READY' });
+
+  document.getElementById('runButton').addEventListener('click', () => {
+    vscode.postMessage({ type: 'RUN' });
+  });
+
+  // Si los bloques no se pueden traducir, el Java de la derecha se queda viejo: avisar
+  const errorBanner = document.getElementById('errorBanner');
+  window.addEventListener('message', (event) => {
+    const message = event.data;
+    if (message && message.type === 'TRANSLATE_ERROR') {
+      errorBanner.textContent = 'No se pudo generar el Java de estos bloques: ' +
+        ((message.payload && message.payload.message) || 'error desconocido') +
+        '. El código de la derecha corresponde a la última versión que funcionó.';
+      errorBanner.style.display = 'block';
+    } else if (message && message.type === 'TRANSLATE_OK') {
+      errorBanner.style.display = 'none';
+    }
+  });
 
   // exportBtn.addEventListener('click', () => {
   //   const dom = Blockly.Xml.workspaceToDom(workspace);

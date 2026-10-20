@@ -2,7 +2,7 @@
   "name": "paco",
   "displayName": "PACO - Visual Java Editor",
   "description": "PACO: visual block editor (Scratch-style) that generates compilable Java code in real time. Learn Java visually.",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "publisher": "FranciscoSZ",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -13,6 +13,10 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/PakoPakete/paco"
+  },
+  "homepage": "https://github.com/PakoPakete/paco#readme",
+  "bugs": {
+    "url": "https://github.com/PakoPakete/paco/issues"
   },
   "engines": {
     "vscode": "^1.100.0"
@@ -73,8 +77,22 @@
         "command": "paco.openEditor",
         "title": "PACO: Abrir Editor Visual de Java",
         "icon": "images/icon-activity-bar.svg"
+      },
+      {
+        "command": "paco.runJava",
+        "title": "PACO: Ejecutar programa Java",
+        "icon": "$(play)"
       }
-    ]
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "paco.runJava",
+          "when": "activeCustomEditorId == paco.blockEditor",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
@@ -85,7 +103,8 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "lint": "eslint src",
     "test": "npm run compile-tests && mocha --ui tdd \"out/test/unit/**/*.test.js\"",
-    "test:vscode": "npm run compile-tests && npm run compile && npm run lint && vscode-test"
+    "test:vscode": "npm run compile-tests && npm run compile && npm run lint && vscode-test",
+    "vsix": "vsce package"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
@@ -93,6 +112,8 @@
     "@types/vscode": "^1.100.0",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^4.0.0",
+    "blockly": "^12.3.1",
     "eslint": "^9.39.1",
     "mocha": "^11.8.0",
     "ts-loader": "^9.5.4",
@@ -102,7 +123,6 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "@xmldom/xmldom": "^0.9.12",
-    "blockly": "^12.3.1"
+    "@xmldom/xmldom": "^0.9.12"
   }
 }
