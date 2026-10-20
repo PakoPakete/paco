@@ -56,6 +56,18 @@
         "contents": "Editor visual de bloques que genera código Java en tiempo real.\n\n[$(play) Abrir Editor PACO](command:paco.openEditor)"
       }
     ],
+    "customEditors": [
+      {
+        "viewType": "paco.blockEditor",
+        "displayName": "PACO - Editor de bloques",
+        "selector": [
+          {
+            "filenamePattern": "*.paco"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
     "commands": [
       {
         "command": "paco.openEditor",

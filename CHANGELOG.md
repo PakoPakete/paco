@@ -3,6 +3,14 @@
 All notable changes to PACO will be documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- Block programs are saved as `.paco` files (Blockly XML). Opening a `.paco` file shows the block editor, and Ctrl+S saves it.
+- The block editor keeps its blocks when its tab is hidden and shown again.
+
+---
+
 ## [0.3.1] – 2026-04-24
 
 ### Fixed
