@@ -253,6 +253,11 @@ function parseBlockSequence(firstBlock: Element | null): IRNode[] {
         // Solo letras, números, _ y puntos: com.ejemplo.juego
         const name = fieldText(current, 'NAME', 'com.ejemplo').replace(/[^\w.]/g, '').replace(/^\.+|\.+$/g, '');
         result.push({ kind: 'package', name: name || 'com.ejemplo' });
+      } else if (type === 'use_file') {
+        const file = fieldText(current, 'FILE', '').trim();
+        if (file) {
+          result.push({ kind: 'use_file', file });
+        }
       } else if (type === 'desktop_app') {
         result.push(parseDesktopApp(current));
       } else if (type === 'mobile_app') {

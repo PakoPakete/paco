@@ -21,6 +21,7 @@ export type IRNode =
   | IRClassDefinition
   | IRInterfaceDefinition
   | IRPackage
+  | IRUseFile
   | IRBreak
   | IRContinue
   | IRTryCatchFinally
@@ -496,6 +497,12 @@ export interface IRImport {
 export interface IRPackage {
   kind: 'package';
   name: string;
+}
+
+/** Usa las clases, funciones y constantes de otro archivo .paco del programa. */
+export interface IRUseFile {
+  kind: 'use_file';
+  file: string;
 }
 
 export interface IRCodeTemplate {

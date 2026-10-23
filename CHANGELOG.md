@@ -11,6 +11,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Los textos propios de Blockly (menús, "Eliminar bloque", "Duplicar"...) salen en español.
 - Script `npm run vsix` para generar el paquete `.vsix` que se sube al Marketplace.
 - Clases `sealed`, `non-sealed` y `final` (con "permite" opcional), interfaces `sealed`, records que implementan interfaces y bloque "paquete" (`package com.ejemplo;`).
+- Programas en varios archivos `.paco`: el bloque "usar archivo" (en Librerías) añade al programa las clases, funciones, constantes e imports de otro archivo de la misma carpeta. Sus bloques sueltos no se ejecutan, cada archivo entra una sola vez aunque se use desde varios, y el Java se regenera cuando el archivo usado cambia, se crea o se borra.
 - GIF de demostración en el README para la página del Marketplace.
 - Block programs are saved as `.paco` files (Blockly XML). Opening a `.paco` file shows the block editor, and Ctrl+S saves it.
 - The block editor keeps its blocks when its tab is hidden and shown again.

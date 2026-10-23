@@ -382,6 +382,7 @@ window.addEventListener('load', () => {
         contents: [
           { kind: 'block', type: 'package_declaration' },
           { kind: 'block', type: 'import_library' },
+          { kind: 'block', type: 'use_file' },
           { kind: 'block', type: 'desktop_app' },
           { kind: 'block', type: 'mobile_app' },
           { kind: 'block', type: 'web_service' },
@@ -1543,6 +1544,16 @@ window.addEventListener('load', () => {
       this.setPreviousStatement(true);
       this.setNextStatement(true);
       this.setColour(160);
+    }
+  };
+
+  Blockly.Blocks['use_file'] = {
+    init: function() {
+      this.appendDummyInput().appendField('usar archivo').appendField(new Blockly.FieldTextInput('Figuras.paco'), 'FILE');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(160);
+      this.setTooltip('Usa las clases, funciones y constantes de otro archivo .paco de la misma carpeta. Sus demás bloques no se ejecutan.');
     }
   };
 
