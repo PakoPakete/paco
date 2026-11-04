@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { execFile } from 'child_process';
 
-import { xmlToJavaProgram } from './core/java/program';
+import { xmlToJavaProgram, PacoFile } from './core/java/program';
 
 const VIEW_TYPE = 'paco.blockEditor';
 const JAVA_SCHEME = 'paco-java';
@@ -45,6 +45,8 @@ let lastActivePanel: vscode.WebviewPanel | undefined;
 let output: vscode.OutputChannel;
 let runTerminal: vscode.Terminal | undefined;
 let runCounter = 0;
+// Avisa cuando cambia un archivo .paco (editado o en disco), para regenerar los programas que lo usan
+const pacoFileChanged = new vscode.EventEmitter<vscode.Uri>();
 
 export function activate(context: vscode.ExtensionContext) {
     output = vscode.window.createOutputChannel('PACO');
@@ -56,6 +58,22 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(JAVA_SCHEME, generatedJava));
+
+    const watcher = vscode.workspace.createFileSystemWatcher('**/*.paco');
+    context.subscriptions.push(
+        watcher,
+        pacoFileChanged,
+        watcher.onDidChange(uri => pacoFileChanged.fire(uri)),
+        watcher.onDidCreate(uri => pacoFileChanged.fire(uri)),
+        watcher.onDidDelete(uri => pacoFileChanged.fire(uri)),
+        vscode.workspace.onDidChangeTextDocument(e => {
+            if (e.contentChanges.length > 0) {
+                pacoFileChanged.fire(e.document.uri);
+            }
+        }),
+        // Al cerrar un archivo sin guardar, los que lo usan vuelven a leer el de disco
+        vscode.workspace.onDidCloseTextDocument(doc => pacoFileChanged.fire(doc.uri))
+    );
 
     context.subscriptions.push(
         vscode.window.registerCustomEditorProvider(
@@ -164,6 +182,37 @@ class PacoEditorProvider implements vscode.CustomTextEditorProvider {
 
         // Último texto escrito desde los bloques, para no recargar la webview con sus propios cambios
         let lastWritten: string | null = null;
+        // Último XML de los bloques y archivos que usa (con "usar archivo"), para regenerar el Java si cambian
+        let lastXml: string | null = null;
+        let usedFiles = new Set<string>();
+
+        const translate = (xml: string) => {
+            lastXml = xml;
+            const files = new Set<string>();
+            try {
+                generatedJava.set(javaUri, xmlToJavaProgram(xml, {
+                    fileId: document.uri.toString(),
+                    readFile: (name, from) => readPacoFile(name, from ? vscode.Uri.parse(from) : document.uri, files)
+                }));
+                panel.webview.postMessage({ type: 'TRANSLATE_OK' });
+            } catch (error) {
+                // El alumno tiene que saber que el Java de la derecha ya no corresponde a sus bloques
+                const detail = error instanceof Error ? error.message : String(error);
+                output.appendLine(`Error al traducir a Java: ${detail}`);
+                if (error instanceof Error && error.stack) {
+                    output.appendLine(error.stack);
+                }
+                panel.webview.postMessage({ type: 'TRANSLATE_ERROR', payload: { message: detail } });
+            } finally {
+                usedFiles = files;
+            }
+        };
+
+        const usedFileSubscription = pacoFileChanged.event(uri => {
+            if (lastXml !== null && usedFiles.has(uri.toString())) {
+                translate(lastXml);
+            }
+        });
 
         const sendLoad = () => {
             panel.webview.postMessage({
@@ -184,6 +233,7 @@ class PacoEditorProvider implements vscode.CustomTextEditorProvider {
 
         panel.onDidDispose(() => {
             changeSubscription.dispose();
+            usedFileSubscription.dispose();
             javaUrisByPanel.delete(panel);
             if (lastActivePanel === panel) {
                 lastActivePanel = undefined;
@@ -224,21 +274,42 @@ class PacoEditorProvider implements vscode.CustomTextEditorProvider {
                     await vscode.workspace.applyEdit(edit);
                 }
 
-                try {
-                    generatedJava.set(javaUri, xmlToJavaProgram(xml));
-                    panel.webview.postMessage({ type: 'TRANSLATE_OK' });
-                } catch (error) {
-                    // El alumno tiene que saber que el Java de la derecha ya no corresponde a sus bloques
-                    const detail = error instanceof Error ? error.message : String(error);
-                    output.appendLine(`Error al traducir a Java: ${detail}`);
-                    if (error instanceof Error && error.stack) {
-                        output.appendLine(error.stack);
-                    }
-                    panel.webview.postMessage({ type: 'TRANSLATE_ERROR', payload: { message: detail } });
-                }
+                translate(xml);
             }
         }, undefined, this.context.subscriptions);
     }
+}
+
+/**
+ * Lee el archivo de un bloque "usar archivo", buscado en la carpeta del archivo que lo usa. Si está abierto
+ * se usa lo que hay en el editor aunque no se haya guardado. Anota la ruta en `files` aunque no exista,
+ * para regenerar el Java cuando se cree.
+ */
+function readPacoFile(name: string, from: vscode.Uri, files: Set<string>): PacoFile | undefined {
+    const fileName = /\.paco$/i.test(name) ? name : `${name}.paco`;
+    let folder: vscode.Uri | undefined = vscode.Uri.joinPath(from, '..');
+    if (from.scheme === 'untitled') {
+        // Un programa sin guardar no tiene carpeta: se usa la carpeta abierta
+        folder = vscode.workspace.workspaceFolders?.[0]?.uri;
+    }
+    if (!folder) {
+        return undefined;
+    }
+    const uri = vscode.Uri.joinPath(folder, fileName);
+    files.add(uri.toString());
+
+    const open = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === uri.toString());
+    if (open) {
+        return { id: uri.toString(), xml: open.getText() };
+    }
+    if (uri.scheme === 'file') {
+        try {
+            return { id: uri.toString(), xml: fs.readFileSync(uri.fsPath, 'utf8') };
+        } catch {
+            return undefined;
+        }
+    }
+    return undefined;
 }
 
 function isTabOpen(uri: vscode.Uri): boolean {

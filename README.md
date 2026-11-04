@@ -12,6 +12,7 @@ Hecho por **Francisco Solano Žderić**.
 - Java en tiempo real: cada cambio en los bloques actualiza el código Java de la derecha.
 - Botón **▶ Ejecutar**: compila y ejecuta el programa en un terminal, así que también puede leer del teclado.
 - Los programas se guardan como archivos `.paco`. Si tienes una carpeta abierta, cada programa nuevo se crea en ella como `ProgramaN.paco`; al abrir un `.paco` aparecen sus bloques, y `Ctrl+S` los guarda.
+- Programas en varios archivos: con el bloque **usar archivo** (en *Librerías*) un programa toma las clases, funciones y constantes de otro `.paco` de la misma carpeta, por ejemplo `Figuras.paco`. Si cambias ese archivo, el Java de los programas que lo usan se actualiza solo.
 - Cubre Java de un curso completo: control de flujo, variables y tipos, arrays, colecciones, funciones, clases, interfaces, herencia, excepciones, concurrencia, lambdas y streams, entrada y salida, y Java moderno (`record`, clases e interfaces `sealed`, `switch` con flechas, `var`...).
 - Si unos bloques no se pueden traducir, el editor lo avisa en vez de dejar el Java viejo sin decir nada.
 
