@@ -1,0 +1,16 @@
+name: Pedir un bloque o una mejora
+description: Una idea para que PACO cubra más Java o sea más fácil de usar
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: ¿Qué te gustaría?
+      description: Por ejemplo, un bloque para una instrucción de Java que falta.
+    validations:
+      required: true
+  - type: textarea
+    id: java
+    attributes:
+      label: Java que debería generar
+      render: java

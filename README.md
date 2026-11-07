@@ -1,86 +1,147 @@
-# PACO - Editor visual de Java
+<p align="center">
+  <img src="images/icon.png" width="120" alt="Logo de PACO">
+</p>
 
-**PACO** (Programming Adapter for Code Overlay) es una extensión de Visual Studio Code para aprender Java con bloques estilo Scratch. Cada bloque que colocas se traduce al instante en código Java que compila, y con un clic puedes ejecutarlo.
+<h1 align="center">PACO: aprende Java con bloques</h1>
 
-Hecho por **Francisco Solano Žderić**.
+<p align="center">
+  Arrastra bloques como en Scratch y mira cómo se convierten en <b>Java real</b> al instante, dentro de VS Code.<br>
+  Un clic en <b>▶ Ejecutar</b> y tu programa corre.
+</p>
 
-![Se colocan bloques, PACO escribe el Java al lado y el botón Ejecutar muestra la salida](images/screenshots/demo.gif)
+<p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=FranciscoSZ.paco"><img src="https://img.shields.io/visual-studio-marketplace/v/FranciscoSZ.paco?label=Marketplace&color=007acc" alt="Versión en el Marketplace"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=FranciscoSZ.paco"><img src="https://img.shields.io/visual-studio-marketplace/i/FranciscoSZ.paco?label=instalaciones" alt="Instalaciones"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=FranciscoSZ.paco&ssr=false#review-details"><img src="https://img.shields.io/visual-studio-marketplace/r/FranciscoSZ.paco?label=valoraci%C3%B3n" alt="Valoración"></a>
+  <a href="https://github.com/PakoPakete/paco/actions/workflows/test.yml"><img src="https://github.com/PakoPakete/paco/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licencia-MIT-green" alt="Licencia MIT"></a>
+</p>
 
-## Qué hace
+<p align="center">
+  <img src="images/screenshots/demo.gif" alt="Se colocan bloques, PACO escribe el Java al lado y el botón Ejecutar muestra la salida" width="900">
+</p>
 
-- Editor de bloques basado en Blockly, integrado en VS Code y en español.
-- Java en tiempo real: cada cambio en los bloques actualiza el código Java de la derecha.
-- Botón **▶ Ejecutar**: compila y ejecuta el programa en un terminal, así que también puede leer del teclado.
-- Los programas se guardan como archivos `.paco`. Si tienes una carpeta abierta, cada programa nuevo se crea en ella como `ProgramaN.paco`; al abrir un `.paco` aparecen sus bloques, y `Ctrl+S` los guarda.
-- Programas en varios archivos: con el bloque **usar archivo** (en *Librerías*) un programa toma las clases, funciones y constantes de otro `.paco` de la misma carpeta, por ejemplo `Figuras.paco`. Si cambias ese archivo, el Java de los programas que lo usan se actualiza solo.
-- Cubre Java de un curso completo: control de flujo, variables y tipos, arrays, colecciones, funciones, clases, interfaces, herencia, excepciones, concurrencia, lambdas y streams, entrada y salida, y Java moderno (`record`, clases e interfaces `sealed`, `switch` con flechas, `var`...).
-- Si unos bloques no se pueden traducir, el editor lo avisa en vez de dejar el Java viejo sin decir nada.
+## ¿Por qué PACO?
 
-## Cómo se usa
+Aprender Java suele empezar peleándose con llaves, puntos y comas y mensajes de error. PACO le da la vuelta: primero entiendes **la idea** con bloques que encajan, y a la vez ves **el Java de verdad** que esa idea produce.
 
-1. Haz clic en el icono de PACO en la barra de actividad (a la izquierda).
-2. Pulsa **Abrir Editor PACO**. También puedes ejecutar `PACO: Abrir Editor Visual de Java` desde la paleta de comandos (`Ctrl+Shift+P`), o abrir cualquier archivo `.paco`.
-3. Arrastra bloques desde el menú de la izquierda, empezando por **cuando bandera verde presionada**.
-4. Pulsa **▶ Ejecutar** (o el botón ▷ de la barra del editor) para ver lo que hace tu programa.
+- 🧩 **Bloques que encajan**: si dos piezas no tienen sentido juntas, no encajan. Nada de errores de sintaxis.
+- ☕ **Java real, no un juguete**: el código de la derecha es Java estándar que compila con `javac`. Puedes copiarlo, estudiarlo y llevártelo a cualquier proyecto.
+- ⚡ **En tiempo real**: cada bloque que mueves actualiza el Java al momento, así ves qué línea sale de cada pieza.
+- ▶️ **Ejecutar con un clic**: compila y ejecuta en el terminal de VS Code, también programas que leen del teclado.
+- 🇪🇸 **Todo en español**: los bloques, los menús y los avisos.
+- 🎓 **De cero a un curso completo**: empieza con "imprimir" y llega hasta clases, herencia, colecciones, lambdas, streams e hilos.
+
+## Empieza en un minuto
+
+1. Instala PACO desde el Marketplace (o busca **PACO** en la vista de Extensiones de VS Code).
+2. Haz clic en el icono de PACO en la barra de actividad, a la izquierda, y pulsa **Abrir Editor PACO**.
+3. Arrastra el bloque **cuando bandera verde presionada** y mete dentro un **imprimir**.
+4. Pulsa **▶ Ejecutar**. ¡Ya has escrito tu primer programa en Java!
+
+> Para ejecutar programas necesitas un JDK 17 o superior. Si PACO no encuentra Java, te ofrece descargarlo ([Eclipse Temurin](https://adoptium.net/) es gratis).
+
+## De bloques a Java
+
+Así se ve el ejemplo del GIF: a la izquierda los bloques, a la derecha lo que PACO escribe por ti.
+
+<p align="center">
+  <img src="images/screenshots/editor.png" alt="Editor de bloques de PACO con el Java generado al lado y la salida del programa en el terminal" width="900">
+</p>
+
+```java
+public class PacoProgram {
+    public static void main(String[] args) throws Exception {
+        System.out.println("Hola, soy PACO");
+        for (int i_0 = 0; i_0 < 3; i_0++) {
+            System.out.println("Aprendo Java con bloques");
+        }
+    }
+}
+```
+
+## Todo lo que puedes construir
+
+| Categoría | Lo que aprendes |
+| --- | --- |
+| **Control** | `if`/`else`, `while`, `do-while`, `for`, for-each, `switch` (también con flechas), `break` y `continue` |
+| **Variables y tipos** | `int`, `double`, `long`, `char`, `boolean`, `String`, constantes, `var`, casting |
+| **Texto y matemáticas** | `printf`, métodos de `String`, funciones de `Math`, conversiones, operadores de bits |
+| **Arrays y listas** | arrays 1D y 2D, `ArrayList`, `LinkedList`, `HashSet`, `TreeSet`, `HashMap`, `Stack`, `ArrayDeque`, `Arrays` y `Collections` |
+| **Funciones** | parámetros, valores de retorno, genéricos, varargs, `throws` |
+| **Objetos (OOP)** | clases, constructores, atributos, `this`, `super`, herencia, interfaces, clases abstractas, `enum`, `record`, clases `sealed`, clases internas y anónimas |
+| **Errores** | `try`/`catch`/`finally`, multi-catch, `throw` |
+| **Funcional** | lambdas, referencias a métodos, streams (`filter`, `map`, `sorted`, suma, media...), `Optional` |
+| **Concurrencia** | hilos, `synchronized`, `ExecutorService`, `AtomicInteger` |
+| **Entrada y salida** | leer del teclado con `Scanner`, archivos, URLs, fechas con `LocalDate` |
+
+### Ejemplo: tu primera clase
+
+Una clase `Perro` con su atributo, su constructor y un método, y un `main` que crea un perro y lo hace ladrar. Los bloques de *OOP* se encargan de las llaves, de `this` y de `public static class`.
+
+<p align="center">
+  <img src="images/screenshots/clases.png" alt="Bloques de una clase Perro con constructor y método, su Java generado y la salida Rex dice: ¡Guau! en el terminal" width="900">
+</p>
+
+## Programas en varios archivos
+
+Cuando un programa crece, lo puedes repartir. Pon tus clases en `Figuras.paco` y, desde otro programa de la misma carpeta, usa el bloque **usar archivo** (en *Librerías*). PACO junta las clases, funciones y constantes en el Java generado, y si cambias `Figuras.paco`, los programas que lo usan se actualizan solos.
+
+Cada programa se guarda como un archivo `.paco`: ábrelo y aparecen sus bloques, pulsa `Ctrl+S` y se guardan. Así puedes entregarlos, compartirlos o subirlos a Git como cualquier otro archivo.
+
+## Para docentes
+
+- Los alumnos ven a la vez el concepto (bloques) y la sintaxis (Java), y pueden pasar a escribir Java a mano cuando estén listos.
+- El Java generado es de solo lectura y PACO se encarga de que compile, así que la clase se centra en la lógica y no en los puntos y comas.
+- Funciona sin conexión: Blockly, los iconos y los sonidos van incluidos en la extensión.
+- Gratis y de código abierto (MIT).
 
 ## Requisitos
 
 - Visual Studio Code 1.100 o superior.
-- Para ejecutar los programas, un JDK 17 o superior (por ejemplo [Eclipse Temurin 21](https://adoptium.net/)). Si PACO no encuentra Java, te ofrece descargarlo.
+- Para ejecutar los programas, un JDK 17 o superior. Para crear bloques y ver el Java no hace falta.
+
+## Preguntas frecuentes
+
+**¿Puedo editar el Java que genera PACO?**
+El archivo `PacoProgram.java` es de solo lectura porque siempre refleja los bloques. Si quieres seguir a mano, copia el código a un archivo `.java` nuevo.
+
+**No pasa nada al pulsar ▶ Ejecutar.**
+Comprueba que tienes un JDK instalado (`java -version` en un terminal). Si los bloques no se pueden traducir, el editor muestra un aviso y el detalle aparece en el panel *Salida* → *PACO*.
+
+**¿Dónde se guardan mis programas?**
+Si tienes una carpeta abierta, cada programa nuevo se crea en ella como `ProgramaN.paco`.
+
+**Encontré un error o quiero un bloque nuevo.**
+¡Genial! Abre un [issue en GitHub](https://github.com/PakoPakete/paco/issues) contando qué pasó o qué bloque te gustaría.
+
+## Novedades
+
+La versión 0.5.0 trae el botón **▶ Ejecutar**, programas guardados como `.paco`, programas en varios archivos, más de cien bloques nuevos (Java moderno, colecciones, streams, OOP completo) y muchos arreglos para que el Java generado compile. Todos los detalles en el [CHANGELOG](CHANGELOG.md).
 
 ---
 
 ## English
 
-PACO is a VS Code extension for learning Java with Scratch-style blocks. Every block you place is translated in real time into compilable Java, and the **▶ Ejecutar** (Run) button compiles and runs it in a terminal. Programs are saved as `.paco` files. Running programs requires JDK 17 or later. The interface is in Spanish.
+**PACO lets you learn Java with Scratch-style blocks inside VS Code.** Every block you place is turned into real, compilable Java in real time, side by side, and the **▶ Ejecutar** (Run) button compiles and runs it in the integrated terminal, keyboard input included.
+
+- Covers a full Java course: control flow, types, arrays, collections, methods, classes, inheritance, interfaces, exceptions, lambdas, streams, concurrency and modern Java (`record`, `sealed`, switch expressions, `var`).
+- Programs are saved as `.paco` files, and one program can use the classes and functions of another with the **usar archivo** (use file) block.
+- Works offline. Running programs requires JDK 17 or later.
+- The blocks and the interface are in Spanish.
 
 ---
 
-## Desarrollo
+## Contribuir
 
-### Compilar y probar
-
-```
-npm install
-npm run compile
-npm test
-```
-
-Pulsa `F5` en VS Code para abrir una ventana de desarrollo con la extensión cargada. `npm test` ejecuta los tests del generador de Java; si hay un `javac` en el PATH, también comprueba que el Java generado compila.
-
-### Generar el paquete para el Marketplace (.vsix)
-
-El Marketplace no acepta el código fuente: hay que subir un archivo `.vsix`.
-
-```
-npm install
-npm run vsix
-```
-
-Eso crea `paco-<versión>.vsix` en la carpeta del proyecto. Para probarlo antes de publicarlo: en VS Code, `Extensiones` → `...` → `Instalar desde VSIX...`.
-
-### Publicar una versión nueva
-
-1. Sube el número de `version` en `package.json` y añade la entrada en `CHANGELOG.md`.
-2. Genera el `.vsix` con `npm run vsix`.
-3. Súbelo en [marketplace.visualstudio.com/manage](https://marketplace.visualstudio.com/manage/publishers/FranciscoSZ) (publisher `FranciscoSZ`) con **Update** sobre PACO. También se puede hacer con `npx vsce publish` y un token personal de Azure DevOps.
-
-### Añadir un bloque nuevo
-
-1. Define el bloque en `media/index.js` y añádelo al toolbox del mismo archivo.
-2. Añade su caso en el parser `src/core/scratch/xmlToIr.ts`.
-3. Si necesita un nodo IR nuevo, añade su interfaz en `src/core/ir/nodes.ts`.
-4. Añade el caso que genera Java en `src/core/java/irToJava.ts`.
-5. Añade un test en `src/test/unit/`.
-
----
+PACO es código abierto. Para compilarlo, ejecutar los tests, añadir bloques o generar el `.vsix`, mira [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Autor
 
-Francisco Solano Žderić
-GitHub: https://github.com/PakoPakete
-VS Marketplace: https://marketplace.visualstudio.com/publishers/FranciscoSZ
+Hecho por **Francisco Solano Žderić** · [GitHub](https://github.com/PakoPakete) · [Marketplace](https://marketplace.visualstudio.com/publishers/FranciscoSZ)
+
+Si PACO te sirve, deja una ⭐ en [GitHub](https://github.com/PakoPakete/paco) o una [reseña en el Marketplace](https://marketplace.visualstudio.com/items?itemName=FranciscoSZ.paco&ssr=false#review-details). Ayuda a que más gente lo encuentre.
 
 ## Licencia
 
-MIT - 2025 Francisco Solano Žderić
+[MIT](LICENSE) · 2025 Francisco Solano Žderić
