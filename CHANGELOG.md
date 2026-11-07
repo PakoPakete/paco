@@ -1,9 +1,17 @@
 # Changelog
 
-All notable changes to PACO will be documented here.
-Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+Todos los cambios importantes de PACO se anotan aquí.
+Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/).
 
-## [0.5.0] – 2026-10-20
+## [0.5.0] – 2026-11-07
+
+### Lo más destacado
+- ▶️ **Ejecutar con un clic**: el botón "▶ Ejecutar" compila y ejecuta tu programa en el terminal de VS Code.
+- 💾 **Programas guardados como `.paco`**: ábrelos, edítalos y guárdalos con `Ctrl+S`.
+- 📂 **Programas en varios archivos** con el bloque "usar archivo".
+- 🧩 **Más de cien bloques nuevos**: Java moderno (`record`, `sealed`, `switch` con flechas, `var`), colecciones, streams, lambdas y OOP completo.
+- ✅ **Java que compila**: funciones, clases y `main` corregidos, con tests que comprueban el Java generado con `javac`.
+- 🇪🇸 Blockly totalmente en español y colores que se leen bien con temas oscuros.
 
 ### Added
 - Botón "▶ Ejecutar" en el editor de bloques y comando "PACO: Ejecutar programa Java": guarda el Java generado y lo ejecuta en un terminal (necesita un JDK 17 o superior; si no lo encuentra, ofrece descargarlo).
@@ -12,7 +20,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Script `npm run vsix` para generar el paquete `.vsix` que se sube al Marketplace.
 - Clases `sealed`, `non-sealed` y `final` (con "permite" opcional), interfaces `sealed`, records que implementan interfaces y bloque "paquete" (`package com.ejemplo;`).
 - Programas en varios archivos `.paco`: el bloque "usar archivo" (en Librerías) añade al programa las clases, funciones, constantes e imports de otro archivo de la misma carpeta. Sus bloques sueltos no se ejecutan, cada archivo entra una sola vez aunque se use desde varios, y el Java se regenera cuando el archivo usado cambia, se crea o se borra.
-- GIF de demostración en el README para la página del Marketplace.
+- Página del Marketplace renovada: GIF de demostración, captura, tabla de lo que se aprende, preguntas frecuentes y sección para docentes.
 - Block programs are saved as `.paco` files (Blockly XML). Opening a `.paco` file shows the block editor, and Ctrl+S saves it.
 - The block editor keeps its blocks when its tab is hidden and shown again.
 - Control: do-while, for-each, for clásico (`<`, `<=`, `>`, `>=`, `++`, `--`, `+=`, `-=`).
@@ -47,6 +55,31 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Removed
 - Archivos sobrantes `images/a.svg` y `bloquesQReparar.txt` (sus arreglos ya están en este CHANGELOG).
+
+---
+
+## [0.4.3] – 2026-05-08
+
+### Changed
+- Mejoras en la generación de código Java y nodos IR nuevos.
+- Icono de la barra de actividad actualizado.
+
+---
+
+## [0.4.2] – 2026-04-26
+
+### Changed
+- Icono de la extensión actualizado.
+
+---
+
+## [0.4.1] – 2026-04-26
+
+### Added
+- Bloques de mapas: `put`, `get`, `remove` y `containsKey`.
+
+### Changed
+- Icono de la barra de actividad nuevo.
 
 ---
 

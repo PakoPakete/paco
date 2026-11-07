@@ -1,13 +1,13 @@
 {
   "name": "paco",
-  "displayName": "PACO - Visual Java Editor",
-  "description": "PACO: visual block editor (Scratch-style) that generates compilable Java code in real time. Learn Java visually.",
+  "displayName": "PACO: aprende Java con bloques (Visual Java Editor)",
+  "description": "Arrastra bloques estilo Scratch y mira cómo se convierten en Java real al instante. Ejecuta con un clic. Learn Java visually with Scratch-style blocks that generate compilable Java in real time.",
   "version": "0.5.0",
   "publisher": "FranciscoSZ",
   "license": "MIT",
   "icon": "images/icon.png",
   "galleryBanner": {
-    "color": "#1e1e2e",
+    "color": "#000000",
     "theme": "dark"
   },
   "repository": {
@@ -30,10 +30,18 @@
     "java",
     "blockly",
     "scratch",
-    "visual programming",
-    "education",
+    "bloques",
     "blocks",
-    "code generation"
+    "programación visual",
+    "aprender java",
+    "visual programming",
+    "learn java",
+    "beginner",
+    "education",
+    "teaching",
+    "students",
+    "code generation",
+    "no-code"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -129,5 +137,7 @@
     "@vscode/test-cli": {
       "mocha": "$mocha"
     }
-  }
+  },
+  "pricing": "Free",
+  "qna": "https://github.com/PakoPakete/paco/issues"
 }
