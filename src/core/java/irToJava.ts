@@ -1,8 +1,56 @@
-import { IRNode, IRExpr, IRRepeat, IRIf, IRWhile, IRFor, IRForever, IRSwitch, IRPrint, IRVarAssign, IRVarChange, IRVarRef, IRUnaryOp, IRString, IRRandom, IRComment, IRVarDeclaration, IRVarDeclarationInit, IRVarIncrement, IRVarDecrement, IRArrayDeclaration, IRArrayAccess, IRArrayAssignment, IRArrayLength, IRFunctionDefinition, IRFunctionCall, IRReturn, IRClassDefinition, IRInterfaceDefinition, IRTextConcat, IRTextLength, IRTextSubstring, IRInputRead, IRTryCatchFinally, IRThrow, IRWaitSeconds, IRWaitUntil, IRStop, IRListDeclaration, IRListAdd, IRListRemove, IRListClear, IRListInsert, IRListSet, IRMapDeclaration, IRMapPut, IRMapRemove, IRMapGet, IRMapContainsKey, IREnumDefinition, IRThreadCreate, IRSynchronized, IRImport, IRCodeTemplate, IRBroadcast, IRBroadcastWait, IRWhenReceive, IRTernary, IRCharAt, IRTextContains, IRListGet, IRListSize, IRListContains, IRNewObject, IRLambda, IRStreamFilter, IRFunctionCallExpr, IRFileWrite, IREncryptDecrypt, IRDesktopApp, IRMobileApp, IRWebService } from '../ir/nodes';
+import { IRNode, IRExpr, IRRepeat, IRIf, IRWhile, IRFor, IRForever, IRSwitch, IRPrint, IRVarAssign, IRVarChange, IRVarRef, IRUnaryOp, IRString, IRRandom, IRComment, IRVarDeclaration, IRVarDeclarationInit, IRVarIncrement, IRVarDecrement, IRArrayDeclaration, IRArrayAccess, IRArrayAssignment, IRArrayLength, IRFunctionDefinition, IRFunctionCall, IRReturn, IRClassDefinition, IRInterfaceDefinition, IRTextConcat, IRTextLength, IRTextSubstring, IRInputRead, IRTryCatchFinally, IRThrow, IRWaitSeconds, IRWaitUntil, IRStop, IRListDeclaration, IRListAdd, IRListRemove, IRListClear, IRListInsert, IRListSet, IRMapDeclaration, IRMapPut, IRMapRemove, IRMapGet, IRMapContainsKey, IREnumDefinition, IRThreadCreate, IRSynchronized, IRImport, IRCodeTemplate, IRBroadcast, IRBroadcastWait, IRWhenReceive, IRTernary, IRCharAt, IRTextContains, IRListGet, IRListSize, IRListContains, IRNewObject, IRLambda, IRStreamFilter, IRFunctionCallExpr, IRFileWrite, IREncryptDecrypt, IRDesktopApp, IRMobileApp, IRWebService, IRDoWhile, IRForEach, IRCompoundAssign, IRMethodCall, IRMethodCallExpr, IRFieldAccess, IRFieldAssign, IRPrintf, IRSuperCall, IRConstantDeclaration, IRArray2DDeclaration, IRArray2DAssignment, IRArray2DAccess, IRCollectionDeclaration, IRCharLiteral, IRStaticCall, IRConstant, IRInstanceOf, IRExprStatement, IRLabeled, IRJumpLabel, IRAssert, IRSwitchArrow, IRSwitchExpr, IRRecordDefinition, IRLambdaBlock, IRMethodRef, IRTextBlock, IRAnonymousClass } from '../ir/nodes';
 
-export function irToJava(nodes: IRNode[]): string {
+type Ctx = { loopCounter: number; classLevel?: boolean; throwingFunctions?: Set<string> };
+
+/** Context for the body of a method: its statements are local, not members of the class. */
+function bodyCtx(ctx: Ctx): Ctx {
+  return { ...ctx, classLevel: false };
+}
+
+// Calls emitted by blocks that throw checked exceptions (files, URLs, databases, threads...).
+const CHECKED_CALLS = /\b(Files\.(readAllBytes|writeString)|openConnection|DriverManager\.getConnection|Class\.forName|ProcessBuilder\(|Cipher\.getInstance|\.join\(\)|\.awaitTermination\()/;
+
+/**
+ * Names of the top-level functions whose body needs `throws Exception`: they use a block
+ * that throws a checked exception or call another such function.
+ */
+function findThrowingFunctions(nodes: IRNode[]): Set<string> {
+  const bodies = new Map<string, string>();
+  for (const n of nodes) {
+    if (n.kind === 'function_definition') {
+      const f = n as IRFunctionDefinition;
+      bodies.set(safeId(f.name), emitNodes(f.body, new Set(), { loopCounter: 0 }));
+    }
+  }
+  const throwing = new Set<string>();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [name, body] of bodies) {
+      if (throwing.has(name)) {
+        continue;
+      }
+      const callsThrowing = [...throwing].some(t => new RegExp(`\\b${t}\\(`).test(body));
+      if (CHECKED_CALLS.test(body) || callsThrowing) {
+        throwing.add(name);
+        changed = true;
+      }
+    }
+  }
+  return throwing;
+}
+
+let lambdaCounter = 0;
+
+/**
+ * classLevel: the nodes are members of PacoProgram (functions, classes, constants)
+ * rather than statements inside main.
+ */
+export function irToJava(nodes: IRNode[], options: { classLevel?: boolean } = {}): string {
   const declared = new Set<string>();
-  const ctx = { loopCounter: 0 };
+  const throwingFunctions = options.classLevel ? findThrowingFunctions(nodes) : new Set<string>();
+  const ctx: Ctx = { loopCounter: 0, classLevel: options.classLevel, throwingFunctions };
+  lambdaCounter = 0;
   const body = emitNodes(nodes, declared, ctx);
   if (body.includes('scanner.')) {
     return 'java.util.Scanner scanner = new java.util.Scanner(System.in);\n' + body;
@@ -10,7 +58,7 @@ export function irToJava(nodes: IRNode[]): string {
   return body;
 }
 
-function emitNodes(nodes: IRNode[], declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitNodes(nodes: IRNode[], declared: Set<string>, ctx: Ctx): string {
   let out = '';
   if (!nodes || nodes.length === 0) {
     return out;
@@ -102,7 +150,8 @@ function emitNodes(nodes: IRNode[], declared: Set<string>, ctx: { loopCounter: n
         break;
 
       case 'class_definition':
-        out += emitClassDefinition(node as IRClassDefinition, declared, ctx);
+        // Outside a method body the class is a member of PacoProgram; inside one it is a local class.
+        out += emitClassDefinition(node as IRClassDefinition, declared, ctx, ctx.classLevel !== false);
         break;
 
       case 'interface_definition':
@@ -238,6 +287,126 @@ function emitNodes(nodes: IRNode[], declared: Set<string>, ctx: { loopCounter: n
         break;
       }
 
+      case 'do_while': {
+        const dw = node as IRDoWhile;
+        out += `do {\n${indent(emitNodes(dw.body, declared, ctx), 1)}} while (${emitBooleanExpr(dw.condition, declared)});\n`;
+        break;
+      }
+
+      case 'for_each': {
+        const fe = node as IRForEach;
+        const inner = new Set(declared);
+        inner.add(safeId(fe.name));
+        out += `for (${fe.elementType} ${safeId(fe.name)} : ${emitTarget(fe.collection, declared)}) {\n${indent(emitNodes(fe.body, inner, ctx), 1)}}\n`;
+        break;
+      }
+
+      case 'compound_assign': {
+        const ca = node as IRCompoundAssign;
+        out += `${safeId(ca.name)} ${ca.op} ${emitExpr(ca.value, declared)};\n`;
+        break;
+      }
+
+      case 'method_call': {
+        const mc = node as IRMethodCall;
+        out += `${emitMethodCall(mc.target, mc.method, mc.args, declared)};\n`;
+        break;
+      }
+
+      case 'field_assign': {
+        const fa = node as IRFieldAssign;
+        out += `${emitTarget(fa.target, declared)}.${safeId(fa.field)} = ${emitExpr(fa.value, declared)};\n`;
+        break;
+      }
+
+      case 'printf': {
+        const pf = node as IRPrintf;
+        const args = pf.args.map(a => ', ' + emitExpr(a, declared)).join('');
+        out += `System.out.printf(${javaString(pf.format)}${args});\n`;
+        break;
+      }
+
+      case 'super_call':
+        out += `super(${(node as IRSuperCall).args.map(a => emitExpr(a, declared)).join(', ')});\n`;
+        break;
+
+      case 'constant_declaration': {
+        const cd = node as IRConstantDeclaration;
+        declared.add(safeId(cd.name));
+        const mods = ctx.classLevel ? 'static final' : 'final';
+        out += `${mods} ${cd.type} ${safeId(cd.name)} = ${emitExpr(cd.value, declared)};\n`;
+        break;
+      }
+
+      case 'array2d_declaration': {
+        const a2 = node as IRArray2DDeclaration;
+        declared.add(safeId(a2.name));
+        out += `${a2.type}[][] ${safeId(a2.name)} = new ${a2.type}[${emitExpr(a2.rows, declared)}][${emitExpr(a2.cols, declared)}];\n`;
+        break;
+      }
+
+      case 'array2d_assignment': {
+        const as2 = node as IRArray2DAssignment;
+        out += `${safeId(as2.name)}[${emitExpr(as2.row, declared)}][${emitExpr(as2.col, declared)}] = ${emitExpr(as2.value, declared)};\n`;
+        break;
+      }
+
+      case 'collection_declaration': {
+        const cd = node as IRCollectionDeclaration;
+        declared.add(safeId(cd.name));
+        out += `java.util.${cd.collectionType}<${cd.elementType}> ${safeId(cd.name)} = new java.util.${cd.collectionType}<>();\n`;
+        break;
+      }
+
+      case 'labeled': {
+        const lb = node as IRLabeled;
+        // Java labels a single statement: put the label on the first loop, or wrap everything in a block.
+        const loopKinds = ['for', 'while', 'repeat', 'forever', 'do_while', 'for_each'];
+        const loopAt = lb.body.findIndex(n => loopKinds.includes(n.kind));
+        if (loopAt < 0) {
+          out += `${safeId(lb.label)}: {\n${indent(emitNodes(lb.body, new Set(declared), ctx), 1)}}\n`;
+        } else {
+          out += emitNodes(lb.body.slice(0, loopAt), declared, ctx);
+          out += `${safeId(lb.label)}:\n`;
+          out += emitNodes(lb.body.slice(loopAt), declared, ctx);
+        }
+        break;
+      }
+
+      case 'jump_label': {
+        const jl = node as IRJumpLabel;
+        out += `${jl.jump} ${safeId(jl.label)};\n`;
+        break;
+      }
+
+      case 'assert': {
+        const as = node as IRAssert;
+        const msg = as.message ? ` : ${emitExpr(as.message, declared)}` : '';
+        out += `assert ${emitBooleanExpr(as.condition, declared)}${msg};\n`;
+        break;
+      }
+
+      case 'switch_arrow': {
+        const sa = node as IRSwitchArrow;
+        let cases = '';
+        for (const c of sa.cases) {
+          const label = c.value ? `case ${emitExpr(c.value, declared)}` : 'default';
+          cases += `${label} -> {\n${indent(emitNodes(c.body, new Set(declared), ctx), 1)}}\n`;
+        }
+        out += `switch (${emitExpr(sa.expr, declared)}) {\n${indent(cases, 1)}}\n`;
+        break;
+      }
+
+      case 'record_definition': {
+        const rd = node as IRRecordDefinition;
+        out += `public record ${safeId(rd.name)}(${rd.components.map(c => `${c.type} ${safeId(c.name)}`).join(', ')}) {}\n`;
+        break;
+      }
+
+      case 'expr_statement':
+        out += `${emitExpr((node as IRExprStatement).expr, declared)};\n`;
+        break;
+
       case 'web_service': {
         const ws = node as IRWebService;
         const wsBody = emitNodes(ws.body, declared, ctx);
@@ -253,7 +422,7 @@ function emitNodes(nodes: IRNode[], declared: Set<string>, ctx: { loopCounter: n
   return out;
 }
 
-function emitRepeat(node: IRRepeat, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitRepeat(node: IRRepeat, declared: Set<string>, ctx: Ctx): string {
   const timesCode = emitExpr(node.times, declared);
   const loopVar = `i_${ctx.loopCounter++}`;
   const body = emitNodes(node.body, declared, ctx);
@@ -265,7 +434,7 @@ function emitRepeat(node: IRRepeat, declared: Set<string>, ctx: { loopCounter: n
   );
 }
 
-function emitIf(node: IRIf, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitIf(node: IRIf, declared: Set<string>, ctx: Ctx): string {
   const condCode = emitBooleanExpr(node.condition, declared);
   const body = emitNodes(node.body, declared, ctx);
 
@@ -289,7 +458,7 @@ function emitIf(node: IRIf, declared: Set<string>, ctx: { loopCounter: number })
   return result;
 }
 
-function emitWhile(node: IRWhile, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitWhile(node: IRWhile, declared: Set<string>, ctx: Ctx): string {
   const condCode = emitBooleanExpr(node.condition, declared);
   const body = emitNodes(node.body, declared, ctx);
 
@@ -300,7 +469,7 @@ function emitWhile(node: IRWhile, declared: Set<string>, ctx: { loopCounter: num
   );
 }
 
-function emitFor(node: IRFor, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitFor(node: IRFor, declared: Set<string>, ctx: Ctx): string {
   const forDeclared = new Set(declared);
   const initCode = node.init ? emitNodes([node.init], forDeclared, ctx).trim().replace(/;$/, '') : '';
   const condCode = node.condition ? emitExpr(node.condition, forDeclared) : 'true';
@@ -309,71 +478,72 @@ function emitFor(node: IRFor, declared: Set<string>, ctx: { loopCounter: number 
   return `for (${initCode}; ${condCode}; ${incrCode}) {\n${indent(bodyCode, 1)}}\n`;
 }
 
-function emitSwitch(node: IRSwitch, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitSwitch(node: IRSwitch, declared: Set<string>, ctx: Ctx): string {
   const exprCode = emitExpr(node.expr, declared);
   let casesCode = '';
   for (const c of node.cases) {
     const label = c.value ? `case ${emitExpr(c.value, declared)}:` : 'default:';
     const last = c.body.length > 0 ? c.body[c.body.length - 1].kind : '';
     // A trailing break after an explicit break/continue/return/throw is unreachable and javac rejects it.
-    const autoBreak = ['break', 'return', 'throw', 'continue'].includes(last) ? '' : 'break;\n';
+    const autoBreak = ['break', 'return', 'throw', 'continue', 'jump_label', 'stop'].includes(last) ? '' : 'break;\n';
     casesCode += `${label}\n${indent(emitNodes(c.body, declared, ctx) + autoBreak, 1)}`;
   }
   return `switch (${exprCode}) {\n${indent(casesCode, 1)}}\n`;
 }
 
-function emitPrint(node: IRPrint, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitPrint(node: IRPrint, declared: Set<string>, ctx: Ctx): string {
   const exprCode = emitExpr(node.value, declared);
-  return `System.out.println(${exprCode});\n`;
+  return node.newline === false ? `System.out.print(${exprCode});\n` : `System.out.println(${exprCode});\n`;
 }
 
-function emitComment(node: IRComment, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitComment(node: IRComment, declared: Set<string>, ctx: Ctx): string {
   return `// ${node.text}\n`;
 }
 
-function emitVarDeclaration(node: IRVarDeclaration, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitVarDeclaration(node: IRVarDeclaration, declared: Set<string>, ctx: Ctx): string {
   declared.add(node.name);
   return `${node.type} ${safeId(node.name)};\n`;
 }
 
-function emitVarDeclarationInit(node: IRVarDeclarationInit, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitVarDeclarationInit(node: IRVarDeclarationInit, declared: Set<string>, ctx: Ctx): string {
   declared.add(node.name);
   const valueCode = emitExpr(node.value, declared);
   return `${node.type} ${safeId(node.name)} = ${valueCode};\n`;
 }
 
-function emitVarIncrement(node: IRVarIncrement, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitVarIncrement(node: IRVarIncrement, declared: Set<string>, ctx: Ctx): string {
   return `${safeId(node.name)}++;\n`;
 }
 
-function emitVarDecrement(node: IRVarDecrement, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitVarDecrement(node: IRVarDecrement, declared: Set<string>, ctx: Ctx): string {
   return `${safeId(node.name)}--;\n`;
 }
 
-function emitArrayDeclaration(node: IRArrayDeclaration, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitArrayDeclaration(node: IRArrayDeclaration, declared: Set<string>, ctx: Ctx): string {
   declared.add(node.name);
   const sizeCode = emitExpr(node.size, declared);
   return `${node.type}[] ${safeId(node.name)} = new ${node.type}[${sizeCode}];\n`;
 }
 
-function emitArrayAssignment(node: IRArrayAssignment, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitArrayAssignment(node: IRArrayAssignment, declared: Set<string>, ctx: Ctx): string {
   const indexCode = emitExpr(node.index, declared);
   const valueCode = emitExpr(node.value, declared);
   return `${safeId(node.name)}[${indexCode}] = ${valueCode};\n`;
 }
 
-function emitFunctionDefinition(node: IRFunctionDefinition, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitFunctionDefinition(node: IRFunctionDefinition, declared: Set<string>, ctx: Ctx): string {
   const paramsCode = node.params.map(p => `${p.type} ${safeId(p.name)}`).join(', ');
-  const bodyCode = emitNodes(node.body, new Set(declared), ctx);
-  return `public static ${node.returnType} ${safeId(node.name)}(${paramsCode}) {\n${indent(bodyCode, 1)}}\n`;
+  const bodyCode = emitNodes(node.body, new Set(declared), bodyCtx(ctx));
+  const throwsCode = ctx.throwingFunctions?.has(safeId(node.name)) ? ' throws Exception' : '';
+  return `public static ${node.returnType} ${safeId(node.name)}(${paramsCode})${throwsCode} {\n${indent(bodyCode, 1)}}\n`;
 }
 
-function emitFunctionCall(node: IRFunctionCall, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitFunctionCall(node: IRFunctionCall, declared: Set<string>, ctx: Ctx): string {
   const argsCode = node.args.map(arg => emitExpr(arg, declared)).join(', ');
   return `${safeId(node.name)}(${argsCode});\n`;
 }
 
-function emitReturn(node: IRReturn, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitReturn(node: IRReturn, declared: Set<string>, ctx: Ctx): string {
   if (node.value) {
     const valueCode = emitExpr(node.value, declared);
     return `return ${valueCode};\n`;
@@ -381,8 +551,10 @@ function emitReturn(node: IRReturn, declared: Set<string>, ctx: { loopCounter: n
   return 'return;\n';
 }
 
-function emitClassDefinition(node: IRClassDefinition, declared: Set<string>, ctx: { loopCounter: number }): string {
-  let header = `public class ${node.name}`;
+function emitClassDefinition(node: IRClassDefinition, declared: Set<string>, ctx: Ctx, member: boolean = true): string {
+  // Member classes live inside PacoProgram (or another class), so they must be static to be created from main.
+  // Local classes, declared inside a method, cannot take modifiers.
+  let header = `${member ? 'public static ' : ''}${node.isAbstract ? 'abstract ' : ''}class ${node.name}`;
   if (node.extendsClass) {
     header += ` extends ${node.extendsClass}`;
   }
@@ -390,36 +562,46 @@ function emitClassDefinition(node: IRClassDefinition, declared: Set<string>, ctx
     header += ` implements ${node.implementsInterfaces.join(', ')}`;
   }
   const attrCode = emitClassAttributes(node.attributes, declared, ctx);
-  const methodCode = node.methods.map(m => emitClassMethod(m, node.name, declared, ctx)).join('\n');
-  return `${header} {\n${indent(attrCode + methodCode, 1)}}\n`;
+  // A generic class Caja<T> has a constructor called just Caja.
+  const simpleName = node.name.replace(/<.*$/, '').trim();
+  const methodCode = node.methods.map(m => emitClassMethod(m, simpleName, declared, ctx)).join('\n');
+  const innerCode = (node.innerClasses ?? []).map(c => '\n' + emitClassDefinition(c, declared, ctx, true)).join('');
+  return `${header} {\n${indent(attrCode + methodCode + innerCode, 1)}}\n`;
 }
 
-function emitClassAttributes(attrs: IRVarDeclaration[], declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitClassAttributes(attrs: IRVarDeclaration[], declared: Set<string>, ctx: Ctx): string {
   let out = '';
   for (const attr of attrs) {
-    const mod = attr.accessModifier || 'private';
-    out += `${mod} ${attr.type} ${safeId(attr.name)};\n`;
+    const mods = [attr.accessModifier || 'private'];
+    if (attr.isStatic) { mods.push('static'); }
+    if (attr.isFinal) { mods.push('final'); }
+    const init = attr.value ? ` = ${emitExpr(attr.value, declared)}` : '';
+    out += `${mods.join(' ')} ${attr.type} ${safeId(attr.name)}${init};\n`;
   }
   return out;
 }
 
-function emitClassMethod(node: IRFunctionDefinition, className: string, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitClassMethod(node: IRFunctionDefinition, className: string, declared: Set<string>, ctx: Ctx): string {
   const mod = node.accessModifier || 'public';
   const override = node.isOverride ? '@Override\n' : '';
   const staticMod = node.isStatic ? 'static ' : '';
 
   if (node.name === '__constructor__') {
     const paramsCode = node.params.map(p => `${p.type} ${safeId(p.name)}`).join(', ');
-    const bodyCode = emitNodes(node.body, new Set(declared), ctx);
+    const bodyCode = emitNodes(node.body, new Set(declared), bodyCtx(ctx));
     return `${override}${mod} ${className}(${paramsCode}) {\n${indent(bodyCode, 1)}}\n`;
   }
 
   const paramsCode = node.params.map(p => `${p.type} ${safeId(p.name)}`).join(', ');
-  const bodyCode = emitNodes(node.body, new Set(declared), ctx);
-  return `${override}${mod} ${staticMod}${node.returnType} ${safeId(node.name)}(${paramsCode}) {\n${indent(bodyCode, 1)}}\n`;
+  const throwsCode = node.throwsTypes ? ` throws ${node.throwsTypes}` : '';
+  if (node.isAbstract) {
+    return `${mod} abstract ${node.returnType} ${safeId(node.name)}(${paramsCode})${throwsCode};\n`;
+  }
+  const bodyCode = emitNodes(node.body, new Set(declared), bodyCtx(ctx));
+  return `${override}${mod} ${staticMod}${node.returnType} ${safeId(node.name)}(${paramsCode})${throwsCode} {\n${indent(bodyCode, 1)}}\n`;
 }
 
-function emitInterfaceDefinition(node: IRInterfaceDefinition, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitInterfaceDefinition(node: IRInterfaceDefinition, declared: Set<string>, ctx: Ctx): string {
   let methodsCode = '';
   for (const m of node.methods) {
     const params = m.params.map(p => `${p.type} ${safeId(p.name)}`).join(', ');
@@ -428,25 +610,28 @@ function emitInterfaceDefinition(node: IRInterfaceDefinition, declared: Set<stri
   return `public interface ${node.name} {\n${indent(methodsCode, 1)}}\n`;
 }
 
-function emitForever(node: IRForever, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitForever(node: IRForever, declared: Set<string>, ctx: Ctx): string {
   const body = emitNodes(node.body, declared, ctx);
   return `while (true) {\n${indent(body || '', 1)}}\n`;
 }
 
-function emitWaitSeconds(node: IRWaitSeconds, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitWaitSeconds(node: IRWaitSeconds, declared: Set<string>, ctx: Ctx): string {
   const secs = emitExpr(node.seconds, declared);
   return `try { Thread.sleep((long)(${secs} * 1000)); } catch (InterruptedException e) { e.printStackTrace(); }\n`;
 }
 
-function emitWaitUntil(node: IRWaitUntil, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitWaitUntil(node: IRWaitUntil, declared: Set<string>, ctx: Ctx): string {
   const cond = emitExpr(node.condition, declared);
   return `while (!(${cond})) {\n${indent('try { Thread.sleep(10); } catch (InterruptedException e) { break; }\n', 1)}}\n`;
 }
 
-function emitTryCatchFinally(node: IRTryCatchFinally, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitTryCatchFinally(node: IRTryCatchFinally, declared: Set<string>, ctx: Ctx): string {
   const tryCode = emitNodes(node.tryBody, declared, ctx);
-  const catchCode = emitNodes(node.catchBody, declared, ctx);
-  let result = `try {\n${indent(tryCode, 1)}} catch (${node.catchType} ${safeId(node.catchVar)}) {\n${indent(catchCode, 1)}}`;
+  const catches = node.catches ?? [{ type: node.catchType, varName: node.catchVar, body: node.catchBody }];
+  let result = `try {\n${indent(tryCode, 1)}}`;
+  for (const c of catches) {
+    result += ` catch (${c.type} ${safeId(c.varName)}) {\n${indent(emitNodes(c.body, declared, ctx), 1)}}`;
+  }
   if (node.finallyBody && node.finallyBody.length > 0) {
     const finallyCode = emitNodes(node.finallyBody, declared, ctx);
     result += ` finally {\n${indent(finallyCode, 1)}}`;
@@ -454,42 +639,42 @@ function emitTryCatchFinally(node: IRTryCatchFinally, declared: Set<string>, ctx
   return result + '\n';
 }
 
-function emitThrow(node: IRThrow, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitThrow(node: IRThrow, declared: Set<string>, ctx: Ctx): string {
   const expr = emitExpr(node.expr, declared);
   return `throw ${expr};\n`;
 }
 
-function emitWhenReceive(node: IRWhenReceive, declared: Set<string>, ctx: { loopCounter: number }): string {
-  const body = emitNodes(node.body, declared, ctx);
+function emitWhenReceive(node: IRWhenReceive, declared: Set<string>, ctx: Ctx): string {
+  const body = emitNodes(node.body, declared, bodyCtx(ctx));
   return `public static void ${safeId(node.message)}() {\n${indent(body, 1)}}\n`;
 }
 
-function emitListDeclaration(node: IRListDeclaration, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitListDeclaration(node: IRListDeclaration, declared: Set<string>, ctx: Ctx): string {
   declared.add(node.name);
   return `java.util.ArrayList<${node.elementType}> ${safeId(node.name)} = new java.util.ArrayList<>();\n`;
 }
 
-function emitMapDeclaration(node: IRMapDeclaration, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitMapDeclaration(node: IRMapDeclaration, declared: Set<string>, ctx: Ctx): string {
   declared.add(node.name);
   return `java.util.HashMap<${node.keyType}, ${node.valueType}> ${safeId(node.name)} = new java.util.HashMap<>();\n`;
 }
 
-function emitEnumDefinition(node: IREnumDefinition, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitEnumDefinition(node: IREnumDefinition, declared: Set<string>, ctx: Ctx): string {
   return `enum ${node.name} { ${node.values.join(', ')} }\n`;
 }
 
-function emitThreadCreate(node: IRThreadCreate, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitThreadCreate(node: IRThreadCreate, declared: Set<string>, ctx: Ctx): string {
   const body = emitNodes(node.body, declared, ctx);
   return `Thread ${safeId(node.name)} = new Thread(() -> {\n${indent(body, 1)}});\n${safeId(node.name)}.start();\n`;
 }
 
-function emitSynchronized(node: IRSynchronized, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitSynchronized(node: IRSynchronized, declared: Set<string>, ctx: Ctx): string {
   const lock = emitExpr(node.lock, declared);
   const body = emitNodes(node.body, declared, ctx);
   return `synchronized (${lock}) {\n${indent(body, 1)}}\n`;
 }
 
-function emitVarAssign(node: IRVarAssign, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitVarAssign(node: IRVarAssign, declared: Set<string>, ctx: Ctx): string {
   const name = safeId(node.name);
   const valueCode = emitExpr(node.value, declared);
 
@@ -500,7 +685,7 @@ function emitVarAssign(node: IRVarAssign, declared: Set<string>, ctx: { loopCoun
   return `${name} = ${valueCode};\n`;
 }
 
-function emitVarChange(node: IRVarChange, declared: Set<string>, ctx: { loopCounter: number }): string {
+function emitVarChange(node: IRVarChange, declared: Set<string>, ctx: Ctx): string {
   const name = safeId(node.name);
   const valueCode = emitExpr(node.value, declared);
 
@@ -523,13 +708,17 @@ function emitExpr(expr: IRExpr, declared: Set<string>): string {
       return (expr as any).value ? 'true' : 'false';
 
     case 'string':
-      return `"${(expr as IRString).value}"`;
+      return javaString((expr as IRString).value);
 
     case 'random':
       const rand = expr as IRRandom;
-      return `(Math.random() * (${emitExpr(rand.max, declared)} - ${emitExpr(rand.min, declared)}) + ${emitExpr(rand.min, declared)})`;
+      // Integer between min and max, both included, like Scratch's "número al azar".
+      return `((int) (Math.random() * ((${emitExpr(rand.max, declared)}) - (${emitExpr(rand.min, declared)}) + 1)) + (${emitExpr(rand.min, declared)}))`;
 
     case 'binary_op':
+      if (expr.op === 'xor') {
+        return `(${emitExpr(expr.left, declared)} ^ ${emitExpr(expr.right, declared)})`;
+      }
       if (expr.op === '^') {
         return `Math.pow(${emitExpr(expr.left, declared)}, ${emitExpr(expr.right, declared)})`;
       }
@@ -565,6 +754,9 @@ function emitExpr(expr: IRExpr, declared: Set<string>): string {
       const input = expr as IRInputRead;
       if (input.type === 'int') {return 'scanner.nextInt()';}
       if (input.type === 'double') {return 'scanner.nextDouble()';}
+      if (input.type === 'boolean') {return 'scanner.nextBoolean()';}
+      if (input.type === 'word') {return 'scanner.next()';}
+      if (input.type === 'hasNextInt') {return 'scanner.hasNextInt()';}
       return 'scanner.nextLine()';
 
     case 'ternary':
@@ -628,9 +820,134 @@ function emitExpr(expr: IRExpr, declared: Set<string>): string {
       const fceArgs = fce.args.map(a => emitExpr(a, declared)).join(', ');
       return `${safeId(fce.name)}(${fceArgs})`;
 
+    case 'method_call_expr': {
+      const mce = expr as IRMethodCallExpr;
+      return emitMethodCall(mce.target, mce.method, mce.args, declared);
+    }
+
+    case 'field_access': {
+      const fa = expr as IRFieldAccess;
+      return `${emitTarget(fa.target, declared)}.${safeId(fa.field)}`;
+    }
+
+    case 'char':
+      return `'${escapeJava((expr as IRCharLiteral).value, "'")}'`;
+
+    case 'null':
+      return 'null';
+
+    case 'super_ref':
+      return 'super';
+
+    case 'static_call': {
+      const sc = expr as IRStaticCall;
+      return `${qualifiedName(sc.callee)}(${sc.args.map(a => emitExpr(a, declared)).join(', ')})`;
+    }
+
+    case 'constant':
+      return qualifiedName((expr as IRConstant).code);
+
+    case 'instance_of': {
+      const io = expr as IRInstanceOf;
+      const bind = io.bindName ? ` ${safeId(io.bindName)}` : '';
+      return `(${emitTarget(io.expr, declared)} instanceof ${io.className}${bind})`;
+    }
+
+    case 'lambda_block': {
+      const lb = expr as IRLambdaBlock;
+      const params = lb.params.length === 1 ? safeId(lb.params[0]) : `(${lb.params.map(safeId).join(', ')})`;
+      // Variables inside a lambda cannot shadow the method's own, so its loops get their own counter range.
+      const body = emitNodes(lb.body, new Set(declared), { loopCounter: 1000 * ++lambdaCounter });
+      return `${params} -> {\n${indent(body, 1)}}`;
+    }
+
+    case 'method_ref': {
+      const mr = expr as IRMethodRef;
+      return `${qualifiedName(mr.target)}::${mr.method === 'new' ? 'new' : safeId(mr.method)}`;
+    }
+
+    case 'switch_expr': {
+      const se = expr as IRSwitchExpr;
+      let cases = '';
+      for (const c of se.cases) {
+        const label = c.value ? `case ${emitExpr(c.value, declared)}` : 'default';
+        cases += `${label} -> ${emitExpr(c.result, declared)};\n`;
+      }
+      // A switch expression must cover every value.
+      if (!se.cases.some(c => c.value === undefined)) {
+        cases += 'default -> throw new IllegalStateException("valor no previsto");\n';
+      }
+      return `switch (${emitExpr(se.expr, declared)}) {\n${indent(cases, 1)}}`;
+    }
+
+    case 'text_block':
+      return emitTextBlock(expr as IRTextBlock);
+
+    case 'anonymous_class': {
+      const ac = expr as IRAnonymousClass;
+      const ctx: Ctx = { loopCounter: 1000 * ++lambdaCounter };
+      const methods = ac.methods.map(m => emitClassMethod(m, ac.className, declared, ctx)).join('\n');
+      return `new ${ac.className}() {\n${indent(methods, 1)}}`;
+    }
+
+    case 'array2d_access': {
+      const a2 = expr as IRArray2DAccess;
+      return `${safeId(a2.name)}[${emitExpr(a2.row, declared)}][${emitExpr(a2.col, declared)}]`;
+    }
+
     default:
       return '0';
   }
+}
+
+/** Expressions that can sit before a "." without parentheses. */
+const SIMPLE_TARGETS = ['var_ref', 'this_ref', 'super_ref', 'string', 'method_call_expr', 'field_access', 'function_call_expr', 'array_access', 'array2d_access', 'list_get', 'map_get', 'static_call', 'constant'];
+
+function emitTarget(expr: IRExpr, declared: Set<string>): string {
+  const code = emitExpr(expr, declared);
+  return SIMPLE_TARGETS.includes(expr.kind) ? code : `(${code})`;
+}
+
+function emitMethodCall(target: IRExpr, method: string, args: IRExpr[], declared: Set<string>): string {
+  return `${emitTarget(target, declared)}.${safeId(method)}(${args.map(a => emitExpr(a, declared)).join(', ')})`;
+}
+
+/** Library names come from dropdowns; anything else is reduced to a safe dotted name. */
+function qualifiedName(name: string): string {
+  return name.split('.').map(part => safeId(part)).join('.');
+}
+
+/**
+ * Makes typed text safe inside a Java literal. Escapes the student typed on purpose
+ * (\n, \t, \") are kept; stray backslashes, bare quotes and real line breaks are escaped.
+ */
+function escapeJava(text: string, quote: string): string {
+  let out = '';
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '\\') {
+      const next = text[i + 1];
+      if (next !== undefined && 'btnfrs"\'\\01234567'.includes(next)) {
+        out += c + next;
+        i++;
+      } else {
+        out += '\\\\';
+      }
+    } else if (c === quote) {
+      out += '\\' + quote;
+    } else if (c === '\n') {
+      out += '\\n';
+    } else if (c === '\r') {
+      out += '\\r';
+    } else {
+      out += c;
+    }
+  }
+  return out;
+}
+
+function javaString(text: string): string {
+  return `"${escapeJava(text, '"')}"`;
 }
 
 function emitBooleanExpr(expr: IRExpr, declared: Set<string>): string {
@@ -675,4 +992,12 @@ function safeId(name: string): string {
     return 'var';
   }
   return /^\d/.test(cleaned) ? '_' + cleaned : cleaned;
+}
+
+/** Java 15 text block. Lines come from the "\n" the student typed. */
+function emitTextBlock(tb: IRTextBlock): string {
+  const q = '"'.repeat(3);
+  // Escaping every quote keeps a line ending in " from merging with the closing delimiter.
+  const body = tb.lines.map(l => escapeJava(l, '"')).join('\n');
+  return `${q}\n${body}${q}`;
 }
