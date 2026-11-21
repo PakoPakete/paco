@@ -1,0 +1,26 @@
+name: Informar de un error
+description: Algo no funciona como esperabas
+labels: [bug]
+body:
+  - type: textarea
+    id: que-paso
+    attributes:
+      label: ¿Qué pasó?
+      description: Cuenta qué hiciste, qué esperabas y qué ocurrió.
+    validations:
+      required: true
+  - type: textarea
+    id: bloques
+    attributes:
+      label: Bloques o archivo .paco
+      description: Si puedes, adjunta el archivo `.paco` o una captura de los bloques.
+  - type: textarea
+    id: java
+    attributes:
+      label: Java generado o mensaje de error
+      render: java
+  - type: input
+    id: versiones
+    attributes:
+      label: Versiones
+      description: Versión de PACO, de VS Code y de Java (`java -version`).
