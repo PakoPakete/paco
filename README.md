@@ -132,10 +132,6 @@ La versión 0.5.0 trae el botón **▶ Ejecutar**, programas guardados como `.pa
 
 ---
 
-## Contribuir
-
-PACO es código abierto. Para compilarlo, ejecutar los tests, añadir bloques o generar el `.vsix`, mira [CONTRIBUTING.md](CONTRIBUTING.md).
-
 ## Autor
 
 Hecho por **Francisco Solano Žderić** · [GitHub](https://github.com/PakoPakete) · [Marketplace](https://marketplace.visualstudio.com/publishers/FranciscoSZ)
